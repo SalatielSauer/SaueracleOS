@@ -1,0 +1,2704 @@
+<!--SaueracleOS by @SalatielSauer - Content Generation Toolset for Sauerbraten-->
+<!--This is an incomplete remake of SaueracleOS (23/08/2024)-->
+<!DOCTYPE html>
+<html>
+	<head>
+		<!--<base href='SaueracleOS/v1.0'>-->
+		<title>SaueracleOS</title>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/speed-highlight/core/dist/themes/dark.css">
+		<style>
+			@keyframes window_minimize {
+				from {
+					opacity: 1;
+				}
+				to {
+					transform: translateY(100vh); /* move to the bottom of the viewport */
+					opacity: 0;
+				}
+			}
+
+			@keyframes window_close {
+				0% {
+					filter: grayscale(0);
+				}
+				50% {
+					opacity: 1;
+				}
+				100% {
+					opacity: 0;
+					filter: grayscale(1);
+				}
+			}
+
+			@keyframes loading {
+				from {
+					left: -200px;
+					width: 30%;
+				}
+				50% {
+					width: 30%;
+				}
+				70%{
+					width: 70%;
+				}
+				80%{
+					left: 50%;
+				}
+				95% {
+					left: 120%;
+				}
+				to {
+					left: 100%;
+				}
+			}
+
+			@keyframes spin {
+				from {
+					transform: rotate(0deg);
+				} to {
+					transform: rotate(360deg);
+				}
+			}
+
+			@keyframes flip {
+				0%, 20%, 80%, 100% {
+					transform: rotate(0deg);
+				}
+				50% {
+					transform: rotate(180deg);
+				}
+			}
+
+			/* Scrollbar by: GhostRider (https://codepen.io/GhostRider/pen/GHaFw) */
+			::-webkit-scrollbar-track
+			{
+				-webkit-box-shadow: inset 0 0 6px rgba(1,1,1,1.3);
+				background-color: #201d1a;
+			}
+
+			::-webkit-scrollbar
+			{
+				width: 12px;
+				background-color: #201d1a;
+			}
+
+			::-webkit-scrollbar-thumb
+			{
+				border-radius: 2px;
+				-webkit-box-shadow: inset 0 0 6px rgba(1,1,1,.3);
+				background-color: #cf1b95;
+			}
+
+			::-webkit-scrollbar-corner { background-color: #201d1a; }
+			::-webkit-scrollbar { cursor:pointer; }
+
+			a:hover {
+				color: #7fffa7;
+			}
+
+			a {
+				color: aquamarine;
+				text-decoration: none;
+			}
+
+			.app_window_loading { display:none; width:100%; height:4px; background:#1a1a1a; position:absolute; overflow:hidden; z-index: 1;}
+			.app_window_loading::after { content:''; display:block; position:absolute; left:-200px; width:200px; height:4px; background:#4CAF50; animation:loading 2s linear infinite }
+
+			body, html {
+			    height: 100%;
+			    margin: 0;
+			    padding: 0;
+			    background-color: black;
+			}
+			#desktop {
+				background: url('https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/wallpaper.jpeg?raw=true') center/cover;
+				height: calc(100vh - 40px)
+			}
+			.desktop_apps {
+				display: grid;
+				grid-template-columns: repeat(9, 100px);
+				gap: 16px;
+				grid-auto-rows: minmax(80px, auto);
+				/* justify-content: center; */
+				align-content: start;
+				padding: 20px;
+				overflow: auto;
+				height: calc(100vh - 40px);
+				font-family: sans-serif;
+			}
+
+			.desktop_app {
+				width: 80px;
+				height: 80px;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+				transition: .2s;
+				text-align: center;
+				padding: 4px;
+			}
+
+			.desktop_app:hover {
+			    transform: scale(1.1);
+			    filter: brightness(1.2);
+			}
+
+			.desktop_app img {
+			    width: 48px;
+			    height: 48px;
+			    margin-bottom: 5px;
+			}
+
+			.desktop_app_title {
+				color: #fff;
+				text-shadow: 1px 1px 2px #000;
+				font-size: 12px;
+			}
+
+			#toolbar {
+				display: flex;
+				align-items: center;
+				padding: 10px;
+				background-color: #333;
+				color: white;
+				position: relative;
+				top: -57px;
+				background: rgba(44, 0, 30, 0.8);
+				z-index: 2;
+			}
+
+			.toolbar_icon, #button_start {
+				background: none;
+				border: none;
+				cursor: pointer;
+				padding: 5px;
+				margin-right: 10px;
+			}
+			.toolbar_icon :hover, #button_start :hover, .app_window_header_buttons :hover {
+				transform: scale(1.2);
+			}
+
+			.toolbar_icon_selected {
+				outline-color: #8b14cd;
+				outline-style: inset;
+				background-color: #4f006ab0;
+				box-shadow: 0px 0px 5px 0px #6e3159;
+				filter: brightness(1.2);
+			}
+
+			.toolbar_subicon {
+				background-color: #a718f652;
+				border-radius: 5px;
+				position: absolute;
+				margin-left: -15px;
+				margin-top: 10px;
+				border-top-left-radius: 0px;
+			}
+
+			#button_start :hover {
+				background-color: rgb(71 0 48 / 80%);
+				border-radius: 40px;
+			}
+
+			#toolbar img {
+				height: 24px;
+				width: auto;
+			}
+
+			#desktop {
+				position: relative;
+				width: 100%;
+				height: 100vh;
+				overflow: hidden;
+			}
+
+			.app_window {
+				top: 0;
+				position: absolute;
+				/*width: 300px;
+				height: 200px;*/
+				background: #242424;
+				border: 1px solid rgba(44, 0, 30, 0.8);
+				border-radius: 5px;
+				overflow: hidden;
+				resize: both;
+				overflow: auto;
+				box-sizing: border-box;
+				min-height: 40px;
+				min-width: 128px;
+				box-shadow: 0 0 6px 0px #000000a3;
+				transition: border-color 0.1s, opacity 0.1s;
+				z-index: 1;
+			}
+
+			.app_window_content {
+				overflow: auto;
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				top: 29px;
+				margin: 6px;
+				border-style: outset;
+				border-color: #0000000f;
+				color: white;
+				font-family: sans-serif;
+			}
+			.app_window_header {
+				display: flex;
+				/* justify-content: space-between; */
+				align-items: center;
+				text-align: left;
+				padding: 5px 10px;
+				background: #4d0035;
+				color: white;
+				cursor: move;
+				user-select: none;
+				z-index: 1;
+				position: absolute;
+				width: -webkit-fill-available;
+				width: -moz-available;
+				font-family: sans-serif;
+				line-break: anywhere;
+			}
+
+			.app_window_header_buttons {
+			    position: absolute;
+			    right: 0;
+			    padding: 4px;
+			    z-index: 1;
+			}
+
+			.app_window_header button, .app_window_header_buttons button {
+				border: none;
+				background: none;
+				cursor: pointer;
+			}
+
+			.app_window_header img, .app_window_header_buttons img {
+				height: 16px;
+				width: 16px;
+			}
+			
+			.app_window_icon {
+				margin-right: 5px;
+				border-radius: 15px;
+				filter: drop-shadow(1px 1px 15px black);
+			}
+
+			.app_window_highlight {
+				border-color: #a70073;
+				outline: auto;
+				outline-color: blueviolet;
+				outline-style: solid;
+				outline-width: 1px;
+			}
+
+			.app_window_minimize {
+				animation: window_minimize 0.2s ease-in-out forwards;
+			}
+			.app_window_close {
+				animation: window_close 0.2s ease-in-out forwards;
+			}
+
+			._app_chat_container {
+				background-color: #181818;
+				/* width: 512px; */
+				/* height: 256px; */
+				resize: auto;
+				height: -webkit-fill-available;
+				display: grid;
+				border-bottom-right-radius: 20px;
+			}
+
+			._app_chat_status {
+				color: antiquewhite;
+				font-family: monospace;
+				background-color: #00000030;
+				font-size: smaller;
+				padding: 5px;
+				position: absolute;
+				bottom: 40px;
+				left: 0;
+				user-select: none;
+			}
+			
+			._app_chat_status_input {
+				background-color: #333333;
+				bottom: 42px;
+				left: 3px;
+				border-radius: 10px;
+				border-bottom-left-radius: 0px;
+				border-bottom-right-radius: 0px;
+			}
+
+			._app_chat_messages {
+				position: relative;
+				color: white;
+				font-family: sans-serif;
+				padding: 7px;
+				overflow: auto;
+				min-height: 250px;
+			}
+
+			._app_chat_other {
+				background-color: #00000054;
+				padding: 9px;
+				max-width: fit-content;
+				border-radius: 15px;
+				border-top-left-radius: 0px;
+				margin-bottom: 2px;
+				/* align-items: center; */
+				width: fit-content;
+				/* float: left; */
+				display: inline-block;
+			}
+
+			/*._app_chat_other strong {
+				padding-right: 4px;
+				margin-top: 3px;
+			}*/
+			._app_chat_other ._app_chat_other_name {
+				padding-right: 4px;
+				margin-top: 3px;
+				background-color: #24242457;
+				padding: 2px;
+				border-radius: 5px;
+				display: table;
+				color: #c2fff7;
+			}
+			._app_chat_other_name_timestamp {
+				color: grey;
+				font-size: small;
+				margin: 5px;
+				font-family: monospace;
+			}
+			._app_chat_me {
+				background-color: #002622;
+				padding: 8px;
+				max-width: 256px;
+				border-radius: 15px;
+				border-bottom-right-radius: 0px;
+				float: right;
+				overflow-wrap: anywhere;
+				border-style: solid;
+				border-width: 1px;
+				border-color: #0000005e;
+				margin-bottom: 2px;
+			}
+
+			._app_chat_textarea {
+				place-self: flex-end;
+				flex: auto;
+				background-color: #333333;
+				border-style: none;
+				margin: 3px;
+				resize: none;
+				color: white;
+				font-family: sans-serif;
+				/* min-width: -webkit-fill-available; */
+				padding-left: 5px;
+				padding-top: 5px;
+			}
+
+			._app_chat_textarea:focus-visible {
+			    outline-color: #5e5e5e;
+			    outline-style: solid;
+			}
+			
+			._app_button {
+				background-color: #7289da;
+				border: none;
+				color: #fff;
+				padding: 8px 15px;
+				font-size: 14px;
+				cursor: pointer;
+				border-radius: 3px
+			}
+
+			._app_input_button {
+				cursor: pointer;
+				background-color: #002622;
+				color: white;
+				border-width: 1px;
+				border-bottom-right-radius: 20px;
+			}
+			
+			._app_button:hover {
+				background-color: #00443d;
+			}
+
+			._app_button:disabled {
+				background-color: #5c6170;
+				color: #c9c9c9;
+				pointer-events: none;
+				filter: grayscale(1);
+			}
+
+			._app_button_small {
+				padding: 3px;
+				background-color: #008061;
+				font-size: small;
+			}
+
+			._detached {
+				z-index: 1;
+				position: absolute;
+				right: 0px;
+				top: 0px;
+			}
+
+			._detached ._app_button {
+				margin-left: 5px;
+			}
+
+			:root {
+				--editor-height: 100%;
+				--editor-width: 100%;
+			}
+
+			.texteditor_editor {
+				background: transparent;
+				caret-color: white;
+				color: transparent;
+				outline: none;
+				transition: border-color 0.2s;
+				white-space: pre;
+				z-index: 1;
+				border-style: none;
+				word-wrap: normal;
+			}
+
+			.texteditor_editor:focus {
+				border-color: #444242;
+			}
+
+			.texteditor_editor::selection {
+				background-color: #ed143db5;
+				color: white;
+			}
+
+			.texteditor_pre,
+			.texteditor_editor {
+				overflow: auto;
+			}
+
+			.texteditor_code {
+				color: #bfbfbf;
+				filter: hue-rotate(310deg) saturate(3);
+				pointer-events: none;
+				text-shadow: 0px 1px 3px black;
+				padding-bottom: 4%;
+				outline-offset: -2px;
+			}
+
+			.texteditor_code,
+			.texteditor_editor {
+				font-family: monospace;
+				font-size: 15px;
+				display: block;
+				height: var(--editor-height);
+				max-height: var(--editor-height);
+				max-width: var(--editor-width);
+				min-width: var(--editor-width);
+				position: absolute;
+				resize: none;
+				width: var(--editor-width);
+				text-wrap: balance;
+			}
+
+			.extra_spin {
+				display: none;
+			}
+
+			.extra_spin:last-of-type {
+				display: inline-block;
+				animation: spin 2s linear infinite;
+			}
+
+			.extra_flip {
+				display: none;
+			}
+
+			.extra_flip:last-of-type {
+				display: inline-block;
+				animation: flip 4s linear infinite;
+			}
+
+			/* out-of-place highlight (shj) hack */
+			[class*=shj-lang-] {
+				padding: 15px;
+				margin: 0px;
+				left: 0px;
+				top: 0px;
+			}
+			[class*=shj-lang-]>div {
+				display: block;
+				max-height: 100%;
+				overflow: auto;
+				text-wrap: balance;
+			}
+			[class*=shj-lang-]>div::-webkit-scrollbar,
+			[class*=shj-lang-]>div::-webkit-scrollbar-track,
+			[class*=shj-lang-]>div::-webkit-scrollbar-thumb {
+				background: transparent;
+				background-color: transparent;
+				-webkit-box-shadow: unset;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<div id='desktop'>
+			<div id='desktop_apps_list'></div>
+		</div>
+
+		<div id="toolbar">
+			<div id="open_apps">
+		</div>
+		
+		<script type="module">
+			import { highlightElement } from 'https://cdn.jsdelivr.net/gh/speed-highlight/core/dist/index.js'
+			import { detectLanguage } from 'https://cdn.jsdelivr.net/gh/speed-highlight/core/dist/detect.js'
+
+			window.highlightElement = highlightElement;
+			window.detectLanguage = detectLanguage;
+		</script>
+
+		<script>
+			// hardcoded paths for easy modding
+			const _api_endpoint_chatgenerator = 'https://websim.ai/api/cube2sauerbraten-chat-channel';
+			const _api_endpoint_filegenerator = 'https://websim.ai/api/cube2sauerbraten-saueracleos-file-explorer';
+			const _api_endpoint_functiongenerator = 'https://websim.ai/api/minified-javascript-function-body-generator';
+			const _api_endpoint_htmlgenerator = 'https://websim.ai/api/optimized-html-generator-modern';
+			const _api_endpoint_gametracker_server = 'https://sauertracker.net/api/v2/server';
+			const _api_endpoint_gametracker_servers = 'https://sauertracker.net/api/v2/servers';
+			const _api_endpoint_gametracker_player = 'https://sauertracker.net/api/v2/player';
+			const _api_endpoint_gametracker_mapshots = 'https://sauertracker.net/images/mapshots';
+			const _icon_back = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/folder_return.png?raw=true';
+			const _icon_chat = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/cubicle.jpeg?raw=true';
+			const _icon_close = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/exit.jpeg?raw=true';
+			const _icon_fail = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/fail.gif?raw=true';
+			const _icon_file = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/file.png?raw=true';
+			const _icon_file_empty = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/file_new.png?raw=true';
+			const _icon_folder = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/folder.png?raw=true';
+			const _icon_folder_empty = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/folder_new.png?raw=true';
+			const _icon_info = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/info.jpeg?raw=true';
+			const _icon_josias = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/josias.png?raw=true';
+			const _icon_jsocta = 'https://raw.githubusercontent.com/SalatielSauer/OGZ-Editor/master/images/icon-192.png?raw=true';
+			const _icon_main = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/saueracle.png?raw=true';
+			const _icon_minimize = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/minimize.png?raw=true';
+			const _icon_refresh = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/refresh.png?raw=true';
+			const _icon_server = 'https://github.com/SalatielSauer/SaueracleOS/blob/main/assets/server.jpeg?raw=true';
+
+			const _app_name = 'SaueracleOS';
+			const _app_version = '2.0';
+			const _app_subject_name = 'Cube 2 Sauerbraten';
+			const _app_subject_name_short = 'Sauerbraten';
+
+			const _nelement = (name) => document.createElement(name);
+			const _qelement = (name) => document.querySelector(name);
+
+			class DesktopApps {
+				constructor(parent) {
+				    this.parent = (typeof parent == 'string') ? this._qelement(parent) : parent;
+				    this.toolbar = this._qelement('#open_apps') || undefined;
+				    this.icons = [];
+				    this.windows = [];
+					this.toolbar_icons = [];
+				}
+
+			    _qelement(selector) {
+			        return document.querySelector(selector);
+			    }
+
+			    _nelement(tag) {
+			        return document.createElement(tag);
+			    }
+
+				addWindow(title = 'Default App', body, iconImage = '', width = 128, height = 64, pos_x = 0, pos_y = 0, force = false) {
+				    let existingWindow = this.windows.find(w => w.title === title && (!w.open || force));
+				    if (existingWindow) {
+				        this.toggleWindowDisplay(this.windows.indexOf(existingWindow));
+				        existingWindow.body.focus();
+				        this.updateToolbar();
+				        return;
+				    }
+
+			        let div_window = this._nelement('div');
+			        div_window.className = 'app_window';
+			        div_window.style.position = 'absolute';
+			        div_window.style.width = `${width}px`;
+			        div_window.style.height = `${height}px`;
+
+					// calculate initial position with boundary checks
+					let [adjustedX, adjustedY] = this.adjustPosition(pos_x - (width / 2), pos_y - 16, width, height);
+
+					div_window.style.transform = `translate(${adjustedX}px, ${adjustedY}px)`;
+					div_window.setAttribute('pos_x', adjustedX);
+					div_window.setAttribute('pos_y', adjustedY);
+
+					div_window.setAttribute('force', force);
+
+			        /*div_window.addEventListener('mouseenter', () => {
+			        	div_window.style.opacity = 1
+			        })
+			        div_window.addEventListener('mouseleave', () => {
+			        	div_window.style.opacity = 0.95
+			        })*/
+
+					div_window.addEventListener('click', (e) => {
+						//console.log(appwindow)
+						let appwindow_index = this.windows.indexOf(appwindow)
+						this.updateToolbar();
+						//console.log("window:", appwindow)
+						if (appwindow_index == -1) return;
+						this.toolbar_icons[appwindow_index].classList.add('toolbar_icon_selected')
+					})
+
+					div_window.addEventListener('resize', () => {
+						let dump_refresh = div_window.scrollHeight;
+					})
+
+			        let div_window_header = this._nelement('div');
+			        div_window_header.className = 'app_window_header';
+
+			        let image_window_icon = this._nelement('img');
+			        image_window_icon.src = iconImage;
+			        image_window_icon.className = 'app_window_icon'
+
+			        let span_window_title = this._nelement('span');
+			        span_window_title.className = 'app_window_title';
+			        span_window_title.innerHTML = title;
+
+			        let div_window_header_buttons = this._nelement('div');
+			        div_window_header_buttons.className = 'app_window_header_buttons';
+
+			        let button_refresh = this._nelement('button');
+			        button_refresh.className = 'button_refresh';
+			        button_refresh.addEventListener('click', () => {
+						let index_to_remove = this.windows.findIndex(w => w.body === div_window);
+						console.log('refresh', appwindow.onrefresh, this.lastIconClick, index_to_remove);
+						if (appwindow.onrefresh != false) {
+							appwindow.onrefresh();
+						} else {
+							if (this.lastIconClick) {
+								this.lastIconClick();
+								this.removeWindows(index_to_remove);
+							} else {
+								button_refresh.style.display = 'none';
+							}
+						}
+					});
+					
+			        let image_refresh_button = this._nelement('img');
+			        image_refresh_button.src = _icon_refresh;
+			        button_refresh.appendChild(image_refresh_button);
+
+			        let button_min = this._nelement('button');
+			        button_min.className = 'button_minimize';
+			        button_min.addEventListener('click', () => this.toggleWindowDisplay(this.windows.indexOf(appwindow)));
+
+			        let image_min_button = this._nelement('img');
+			        image_min_button.src = _icon_minimize;
+			        button_min.appendChild(image_min_button);
+
+			        let button_close = this._nelement('button');
+			        button_close.className = 'button_close';
+					button_close.addEventListener('click', () => {
+					    const index = this.windows.findIndex(w => w.body === div_window);
+					    div_window.classList.add('app_window_close');
+					    setTimeout(() => {
+					    	this.removeWindows(index);
+					    }, 200)
+					    
+					});
+
+			        let image_close_button = this._nelement('img');
+			        image_close_button.src = _icon_close;
+			        button_close.appendChild(image_close_button);
+
+			        let div_window_content = this._nelement('div');
+			        div_window_content.className = 'app_window_content';
+
+					let div_window_loading = this._nelement('div');
+					div_window_loading.className = 'app_window_loading';
+					div_window_content.appendChild(div_window_loading);
+
+			        div_window_content.appendChild(body);
+
+			        div_window_header.appendChild(image_window_icon);
+			        div_window_header.appendChild(span_window_title);
+					div_window_header_buttons.appendChild(button_refresh);
+			        div_window_header_buttons.appendChild(button_min);
+			        div_window_header_buttons.appendChild(button_close);
+			        if (!force) {
+						div_window_header.appendChild(div_window_header_buttons);
+					}
+			        div_window.appendChild(div_window_header);
+			        div_window.appendChild(div_window_content);
+
+					let appwindow = {
+					    title,
+					    open: true,
+					    body: div_window,
+					    iconImage,
+						subIcon: false,
+						loading: (state = false) => {div_window_loading.style.display = state ? 'block' : 'none'},
+						onrefresh: false,
+					};
+
+			        this.windows.push(appwindow);
+			        div_window.focus();
+			        this.drawWindows(this.windows.length - 1);
+			        this.updateToolbar();
+					return appwindow;
+			    }
+
+			    removeWindows(index = -1) {
+			        if (index === -1) {
+			            this.windows.forEach(win => win.body.remove());
+			            this.windows = [];
+			        } else {
+			            this.windows[index].body.remove();
+			            this.windows.splice(index, 1);
+			        }
+			        this.updateToolbar();
+			    }
+
+			    drawWindows(index = -1) {
+			        if (index === -1) {
+			            this.windows.forEach(win => {
+			                if (win.open) {
+			                    this.parent.appendChild(win.body);
+								console.log("loading", win.title, win.loading)
+								if (win.loading) {
+									win.body.querySelectorAll('.app_window_loading')[0].style.display = 'block';
+								} else {
+									win.body.querySelectorAll('.app_window_loading')[0].style.display = 'none';
+								}
+			                }
+			            });
+			        } else if (this.windows[index]) {
+			            this.parent.appendChild(this.windows[index].body);
+			        }
+			    }
+
+
+			    toggleWindowDisplay(index) {
+			        if (this.windows[index]) {
+			            const currentDisplay = this.windows[index].body.style.display;
+			            this.windows[index].open = currentDisplay === 'none';
+		            	if (!this.windows[index].open) {
+		            		this.windows[index].body.classList.add('app_window_minimize')
+		            	}
+
+			            setTimeout(() => {
+			            	this.windows[index].body.style.display = currentDisplay === 'none' ? 'block' : 'none';
+			            	this.windows[index].body.className = 'app_window';
+			            }, !this.windows[index].open ? 500 : 0)
+
+			        }
+			       
+
+			    }
+
+			    drawIcons(list = this.icons) {
+			        this.parent.innerHTML = '';
+			        this.parent.appendChild(this.getIcons(list));
+			    }
+
+			    getIcons(list = this.icons) {
+			        const icons = this._nelement('div');
+			        icons.className = 'desktop_apps';
+
+			        list.forEach(icon => {
+			            let div_icon = this._nelement('div');
+			            div_icon.className = 'desktop_app';
+			            div_icon.addEventListener('click', (event) => icon.onclick(event));
+
+			            let img_icon = this._nelement('img');
+			            img_icon.src = icon.image;
+
+			            let div_title = this._nelement('div');
+			            div_title.className = 'desktop_app_title';
+			            div_title.textContent = icon.title;
+
+			            div_icon.appendChild(img_icon);
+			            div_icon.appendChild(div_title);
+
+			            icons.appendChild(div_icon);
+			        });
+
+			        return icons;
+			    }
+
+				addIcon(title = 'Default App', image = '', onclick = () => {}) {
+				    // store the icon data with an onclick that includes the icon image URL
+				    this.icons.push({ title, image, onclick: (e) => {
+						onclick(event, image);
+						this.lastIconClick = () => onclick(event, image);
+					}});
+				}
+
+				updateToolbar() {
+					if (!this.toolbar) return;
+					this.toolbar_icons = [];
+				    this.toolbar.innerHTML = '';
+				    this.windows.forEach((win, index) => {
+				        //if (win.open) {
+				        	let button_toolbar_icon = this._nelement('button');
+							button_toolbar_icon.addEventListener('click', () => {
+								if (!win.open && win.body.style.display == 'block') {win.body.style.display = 'none'}
+								this.toggleWindowDisplay(index);
+								win.body.focus()
+								if (win.open) {
+									let currentSelected = this.toolbar.querySelectorAll('.toolbar_icon_selected');
+									if (currentSelected[0]) {
+										currentSelected[0].classList.remove('toolbar_icon_selected')
+									}
+									button_toolbar_icon.classList.add('toolbar_icon_selected')
+								}
+							});
+				            button_toolbar_icon.className = 'toolbar_icon';
+
+							// handle mouse enter to add outline
+							button_toolbar_icon.addEventListener('mouseenter', () => {
+								win.body.classList.add('app_window_highlight');
+								if (!win.open) {win.body.style.display = 'block'}
+							});
+
+							// handle mouse leave to remove outline
+							button_toolbar_icon.addEventListener('mouseleave', () => {
+								win.body.classList.remove('app_window_highlight');
+								if (!win.open) {win.body.style.display = 'none'}
+							});
+
+				            let icon = this._nelement('img');
+				            icon.src = win.iconImage;  // use the icon image from the window object
+				            icon.title = win.title;  // tooltip showing the window title
+						
+				            button_toolbar_icon.appendChild(icon);
+
+							if (win.subIcon) { // extra smaller icon that shows over the main icon.
+								let subicon = this._nelement('span');
+								subicon.className = 'toolbar_subicon';
+								subicon.textContent = win.subIcon;
+								button_toolbar_icon.appendChild(subicon);
+							}
+
+				            this.toolbar.appendChild(button_toolbar_icon);
+							this.toolbar_icons.push(button_toolbar_icon);
+				        //}
+				    });
+				}
+
+				adjustPosition(x, y, width, height) {
+					// adjust for right and left boundaries
+					x = Math.min(Math.max(x, 0), window.innerWidth - width);
+					
+					// adjust for bottom and top boundaries
+					y = Math.min(Math.max(y, 0), (window.innerHeight-64) - height);
+					
+					return [x, y];
+				}
+
+			}
+
+			class ChatWindow {
+				constructor(classname) {
+					this.div_chat = document.createElement('div');
+					this.div_chat.className = `_app_chat_container ${classname}`;
+
+					this.div_chat_messages = document.createElement('div');
+					this.div_chat_messages.className = '_app_chat_messages';
+
+					this.div_status = document.createElement('div');
+					this.div_status.className = `_app_chat_status`;
+
+
+					this.textarea_chat = document.createElement('textarea');
+					this.textarea_chat.className = '_app_chat_textarea';
+					this.textarea_chat.placeholder = '➤ type your message here';
+
+					this.button_send = document.createElement('button');
+					this.button_send.className = '_app_button';
+					this.button_send.textContent = 'Send';
+
+					this.div_chat.appendChild(this.div_chat_messages);
+
+					let div_input_container = document.createElement('div');
+					div_input_container.style.display = 'flex';
+					div_input_container.style.alignSelf = 'flex-end';
+
+					div_input_container.appendChild(this.div_status);
+					div_input_container.appendChild(this.textarea_chat);
+					div_input_container.appendChild(this.button_send);
+					//this.div_chat.appendChild(this.textarea_chat);
+					//this.div_chat.appendChild(this.button_send);
+					this.div_chat.appendChild(div_input_container);
+					this.parent = this.div_chat_messages;
+
+					this.messages = []
+				}
+
+				showStatus(content = false, inputStatus = false) {
+					if (content) {
+						this.div_status.innerHTML = content;	
+					}
+					this.div_status.style.display = content ? 'block' : 'none';
+					if (inputStatus) {
+						this.div_status.classList.add('_app_chat_status_input')
+					} else {
+						this.div_status.classList.remove('_app_chat_status_input')
+					}
+				}
+
+				addBreaks(element, count) {
+					for (let i = 0; i < count; i++) {
+						element.appendChild(document.createElement('br'));
+					}
+				}
+				pushMessage(author, message, element = this.parent, timestampOfsset = 0) {
+					let span = document.createElement('span');
+					span.className = (author == -1 ? '_app_chat_me' : '_app_chat_other');
+					if (message instanceof HTMLElement) {
+						span.appendChild(message)
+					} else {
+						// calculate the timestamp considering the offset
+						let date = new Date();
+						date.setSeconds(date.getSeconds() + timestampOfsset); // adjust the time by the offset in seconds
+						let timestamp = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // get adjusted time in human-readable format
+						span.innerHTML = `${author == -1 ? '' : `<span class='_app_chat_other_name'><strong>${author}</strong><span class='_app_chat_other_name_timestamp'>${timestamp}</span></span>`}<span>${message}</span>`
+					}
+					this.messages.push({author, span});
+					if (author == -1) { this.addBreaks(element, 2) } else { this.addBreaks(element, 1) }
+					element.appendChild(span);
+					element.scrollTop = element.scrollHeight;
+					if (author == -1) { this.addBreaks(element, 2) }
+					return span;
+				}
+
+				drawMessages(element = this.parent) {
+					element.innerHTML = ``;
+					this.messages.forEach(m => {
+						element.appendChild(m.span);
+						if (m.author == -1) {
+							this.addBreaks(element, 2)
+						}
+					})
+				}
+
+				lastMessageBy(author) {
+					for (let i = this.messages.length - 1; i >= 0; i--) {
+						if (this.messages[i].author === author) {
+							return this.messages[i].span.lastChild;
+						}
+					}
+					return null;
+				}
+
+			}
+
+			class APIFetch {
+				constructor(url) {
+					this.url = url;
+					this.onfirstresponse = () => {}
+					this.onlastresponse = () => {}
+					this.onerror = (e) => {
+						console.error('Failed at APIFetch', url, e)
+					}
+					this.get = () => {
+						fetch(this.url).then(fr => this.onfirstresponse(fr))
+									.then(lr => this.onlastresponse(lr))
+									.catch(err => this.onerror(err))
+					}
+				}
+
+				post(message) {
+					fetch(this.url, {
+						method: 'POST', headers: {'Content-Type': 'application/json', 'Websim-Update': 'true'},
+						body: JSON.stringify({message: message})
+					}).then(fr => this.onfirstresponse(fr))
+					  .then(lr => this.onlastresponse(lr))
+					  .catch(err => this.onerror(err))
+				}
+			}
+
+			class APIFetchContextual {
+				constructor(url) {
+					this.url = url;
+					this.onerror = (e) => {
+						console.error('Failed at APIFetch', this.url, e);
+					}
+				}
+
+				// Default handler for the first response
+				handleFirstResponse(response) {
+					return response.json(); // Assuming the first response should be converted to JSON
+				}
+
+				// Default handler for the last response
+				handleLastResponse(response, callback) {
+					if (callback) {
+						return callback(response);
+					} else {
+						console.log('Last response received:', response);
+					}
+				}
+
+				// Default error handler
+				handleError(error) {
+					console.error('Error in APIFetch:', error);
+				}
+
+				// General fetch function that accepts optional handlers
+				fetchWithOptions(options, onFirstResponse, onLastResponse, onError) {
+					fetch(this.url, options).then(response => {
+						return onFirstResponse ? onFirstResponse(response) : this.handleFirstResponse(response);
+					}).then(result => {
+						if (onLastResponse) {
+							onLastResponse(result);
+						}
+					}).catch(err => {
+						(onError || this.handleError)(err);
+					});
+				}
+
+				get(onFirstResponse, onLastResponse, onError) {
+					this.fetchWithOptions({}, onFirstResponse, onLastResponse, onError);
+				}
+
+				post(message, onFirstResponse, onLastResponse, onError) {
+					const options = {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'Websim-Update': 'true'
+						},
+						body: JSON.stringify({ message: message })
+					};
+
+					this.fetchWithOptions(options, onFirstResponse, onLastResponse, onError);
+				}
+			}
+
+
+			class TreeExplorer {
+				constructor() {
+					this.tree = {
+						name: _app_name,
+						type: 0,
+						description: `${_app_name} System Files.`,
+						child: [
+							{
+								name: _app_subject_name_short,
+								type: 0,
+								description: `${_app_subject_name} related files.`,
+								child: [
+									{
+										name: 'scripts',
+										type: 0,
+										description: `${_app_subject_name} .cfg files, handy gameplay scripts and mods.`,
+										child: []
+									}
+								]
+							},
+							{
+								name: '⚠Cube Engine 3⚠',
+								type: 0,
+								description: 'Top Secret source code of Cube Engine 3 future project, based on quantum technology, contains the src folder, bin, docs, a todo list etc',
+								child: []
+							},
+							{
+								name: 'readme.txt',
+								type: 1,
+								description: `a file containing info about how ${_app_name} works, its on-the-fly interface/content generation, and a warning that all files and folders in LoopFiles are hallucinated (explain what this means). (at the end of the text make sure to indicate that even this file was generated and may not be 100% accurate). avoid over-dramatic claims such as "realistically" or "advanced AI"`,
+								content: ''
+							},
+							{
+								name: 'JSOCTA',
+								type: 0,
+								description: '',
+								child: [
+									{
+										name: 'jsocta_sample.jsocta', type: 1, description: '',
+										content: `// jsocta_sample.jsocta by @SalatielSauer\n/*\nFiles created by Josias The Mapper (.JSOCTA) will be mirrored in this folder. These files can be executed to generate the JSON data used by JSOCTA to assemble the .OGZ file.\n\nYou can run these files using the \"Compile\" button. JSOCTA will attempt to generate the .OGZ file from their output and provide it for you to download.\n\nMaps can be loaded in your Sauerbraten client by performing the following steps:\n\t1. Place the .OGZ files in the packages/base folder of your Sauerbraten.\n\t2. Use the /coop command followed by the name of the .OGZ file in the game console to load the map.\n*/\n\n// Modify the functions below to change the aspects of the .OGZ file:\n\nmapvars({\n\t\"maptitle\": \"Untitled Map by ${_app_name}\",\n\t\"skyboxcolour\": [0, 0, 0]\n})\n\nentities([\n\t{\"x\": 516, \"y\": 516, \"z\": 560, \"t\": 2, \"at1\": 23}, // carrot mapmodel (t: 2)\n\t{\"x\": 516, \"y\": 516, \"z\": 560, \"t\": 3, \"at0\": 90}  // playerstart (t: 3)\n])\n\n/*\nYou can use helper functions to generate arrays and objects:\n_addGround(texture) // returns an [array] containing four 512x512 cubes with given texture.\n_addCube(x, y, z, texture, gridpower) // returns an {object} containing a single cube with given properties.\n_addText(text, x, y, z, texture, gridpower, rotate) // returns an [array] containing cubes that form a given text.\n*/\ngeometry(()=>{\n\tlet cubes = _addGround(6);\n\tlet texture = 5;\n\tlet gridpower = 3;\n\n\tfor (let i = 0; i <= 5; i += 1) {\n\t\tcubes.push(_addCube(512, 512, 512 + (1 << gridpower)*i, texture, gridpower))\n\t}\n\treturn cubes;\n})`
+									},
+									{
+										name: 'customizable_torus.jsocta', type: 1, description: '',
+										content: `/*adjust the variables below and compile the ogz to see the changes in the map in game 🍩*/\nconst radius = 128;\nconst tubeRadius = 32;\nconst segments = 64;\nconst tubularSegments = 256;\nconst textures = [1, 6, 831, 832, 833, 834];\n\nconst result = [];\n\ngeometry(()=>{\n\tfor (let i = 0; i <= tubularSegments; i++) {\n\t\tconst u = (i / tubularSegments) * Math.PI * 2;\n\t\tfor (let j = 0; j <= segments; j++) {\n\t\t\tconst v = (j / segments) * Math.PI * 2;\n\t\t\tconst x = (radius + tubeRadius * Math.cos(v)) * Math.cos(u);\n\t\t\tconst y = (radius + tubeRadius * Math.cos(v)) * Math.sin(u);\n\t\t\tconst z = tubeRadius * Math.sin(v);\n\t\t\tconst texture = textures[Math.floor(Math.random() * textures.length)];\n\t\t\t\n\t\t\tresult.push(_addCube(\n\t\t\t\tMath.round(512 + x),\n\t\t\t\tMath.round(512 + y),\n\t\t\t\tMath.round(512 + z),\n\t\t\t\ttexture\n\t\t\t));\n\t\t}\n\t}\n\treturn result;\n})`
+									},
+									{
+										name: 'terrain_generator.jsocta', type: 1, description: '',
+										content: `/*request: 'I want a terrain generator with customizable parameters'*/\nmapvars({\"skybox\":\"penguins/yonder\",\"maptitle\":\"\\f6Map generated by bot \\f8Josias \\f6from \\f8${_app_name} \\f6(\\f5websim.ai/@SalatielSauer\\f6) using \\f8102357 \\f6cubes. \\n>>\\f8Prompt: \\f7 \\\"I want a terrain generator with customizable parameters\\\"\"})\ngeometry(()=>{\nconst generateTerrain = (size = 164, height = 32, roughness = 0.5, texture = 2) => {\n  const terrain = [];\n  const noise = (x, y) => {\n    let n = 0;\n    let a = 1;\n    let f = 1;\n    for (let i = 0; i < 8; i++) {\n      n += a * Math.sin((x * f) / size) * Math.cos((y * f) / size);\n      a *= roughness;\n      f *= 2;\n    }\n    return n;\n  };\n\n  for (let x = 0; x < size; x++) {\n    for (let y = 0; y < size; y++) {\n      const h = Math.floor((noise(x, y) + 1) * 0.5 * height);\n      for (let z = 0; z <= h; z++) {\n        terrain.push(_addCube(\n          Math.floor(512 - size / 2 + x),\n          Math.floor(512 - size / 2 + y),\n          Math.floor(512 - height / 2 + z),\n          texture\n        ));\n      }\n    }\n  }\n\n  return terrain;\n};\n\nreturn generateTerrain();\n})`
+									}
+								]
+							},
+						]
+					};
+
+					// initialize with reference directly to tree to start at the root
+					this.currentContext = this.tree.child[0].child;
+					this.contextStack = [this.tree, this.tree.child[0]];
+				}
+
+				createItem(name, type, description) {
+					const newItem = type === 0 ? { name, type, description, child: [] } : { name, type, description, content: '' };
+					this.currentContext.push(newItem);
+				}
+
+				openItemAt(index) {
+					if (!this.currentContext[index]) return;
+					const targetItem = this.currentContext[index];
+					if (targetItem.type === 0) { // it's a folder
+						this.contextStack.push(targetItem); // push the folder to the stack
+						this.currentContext = targetItem.child; // navigate into the folder
+					}
+				}
+
+				returnFolder() {
+					if (this.contextStack.length > 1) {
+						this.contextStack.pop(); // go back one step in the stack
+						this.currentContext = this.contextStack[this.contextStack.length - 1].child; // update current context
+					}
+				}
+
+				downloadCurrentFolder() {
+					const zip = new JSZip();
+					const fetchPromises = [];
+					const addItemsToZip = (context, zipFolder) => {
+						context.forEach(item => {
+							if (item.type === 0) { // folder
+								const newFolder = zipFolder.folder(item.name);
+								addItemsToZip(item.child, newFolder);
+							} else if (item.type === 1 && item.content instanceof HTMLImageElement) {
+								const promise = fetch(item.content.src, { mode: 'cors' })
+									.then(response => {
+										if (!response.ok) throw new Error('Network response was not ok');
+										return response.blob();
+									})
+									.then(blob => {
+										zipFolder.file(item.name, blob);
+									})
+									.catch(error => console.error('Error fetching image:', error));
+								fetchPromises.push(promise);
+							} else { // regular file
+								zipFolder.file(item.name, item.content);
+							}
+						});
+					};
+
+					addItemsToZip(this.currentContext, zip);
+
+					Promise.all(fetchPromises)
+						.then(() => {
+							return zip.generateAsync({ type: 'blob' });
+						})
+						.then((blob) => {
+							let folderName = (this.contextStack.length > 1) ? this.contextStack[this.contextStack.length-2].name : this.contextStack[this.contextStack.length-1].name;
+							const url = URL.createObjectURL(blob);
+							const link = document.createElement('a');
+							link.href = url;
+							link.download = folderName || `${_app_name.toLowerCase()}_loopfiles.zip`;
+							link.click();
+							URL.revokeObjectURL(url);
+						})
+						.catch((error) => {
+							console.error('Error downloading the zip file:', error);
+						});
+				}
+
+				pushFile(path, content) {
+					const pathElements = path.split('/'); // split the path by '/'
+					let currentFolder = this.tree; // start from the root
+
+					for (let i = 0; i < pathElements.length; i++) {
+						const element = pathElements[i];
+						if (i === pathElements.length - 1) { // if it's the last element, it's a file
+							currentFolder.child.push({ name: element, type: 1, description: 'File at ' + path, content: content });
+						} else { // it's a folder
+							let foundFolder = currentFolder.child.find(child => child.name === element && child.type === 0);
+							if (!foundFolder) { // if folder does not exist, create it
+								foundFolder = { name: element, type: 0, description: 'Folder in ' + path, child: [] };
+								currentFolder.child.push(foundFolder);
+							}
+							currentFolder = foundFolder; // move to the next level
+						}
+					}
+				}
+
+				openFolder(path) {
+					const pathElements = path.split('/'); // split the path by '/'
+					let currentFolder = this.tree; // start from the root
+					this.contextStack = [this.tree]; // reset context stack to root
+
+					for (const element of pathElements) {
+						const foundFolder = currentFolder.child.find(child => child.name === element && child.type === 0);
+						if (foundFolder) {
+							this.contextStack.push(foundFolder); // update context stack
+							currentFolder = foundFolder; // move to the next level
+						} else {
+							console.error('Folder not found:', element);
+							break; // stop if folder is not found
+						}
+					}
+
+					if (currentFolder) {
+						this.currentContext = currentFolder.child; // Set the current context
+					}
+				}
+			}
+
+			class TextEditor {
+				constructor(parent) {
+					this.forceLang = false;
+					this.parent = parent;
+					this.textarea = document.createElement('textarea');
+					this.textarea.className = 'texteditor_editor';
+					this.textarea.setAttribute('spellcheck', false);
+
+					this.pre = document.createElement('pre');
+					this.pre.className = 'texteditor_pre';
+					this.pre.setAttribute('aria-hidden', true);
+
+					this.code = document.createElement('div');
+					this.code.className = 'texteditor_code';
+
+					this.textarea.addEventListener('input', () => {
+						this.refreshHighlight();
+					});
+
+					this.textarea.addEventListener('scroll', () => {
+						this.refreshScroll();
+					});
+
+					this.pre.appendChild(this.code);
+					this.parent.appendChild(this.textarea);
+					this.parent.appendChild(this.pre);
+				}
+
+				refreshScroll() {
+					if (!this.code.firstChild) return;
+					this.code.firstChild.scrollTop = this.textarea.scrollTop;
+					this.code.firstChild.scrollLeft = this.textarea.scrollLeft;
+				}
+
+				async refreshHighlight() {
+					this.code.textContent = this.textarea.value;
+					let detectedLang = this.forceLang || detectLanguage(this.textarea.value);
+
+					let langClass = `shj-lang-${detectedLang}`;
+					if (!this.textarea.classList.contains(langClass)) {
+						this.textarea.className = this.textarea.className.replace(/\bshj-lang-\S+/g, '');
+						this.textarea.classList.add(langClass);
+					}
+
+					await highlightElement(this.code, detectedLang, 'multiline', {'hideLineNumbers': true});
+
+					this.refreshScroll();  // ensure scroll sync happens after content update
+
+				}
+			}
+
+			class JSOCTA_helper {
+				constructor() {
+					this.mapvars = {'maptitle': `map created with ${_app_name}`};
+					this.entities = [];
+					this.geometry = [];
+				}
+
+				set_mapvars(object = {}) {
+					if (typeof object === 'function') {
+						object = object();
+					}
+					this.mapvars = object || {};
+				}
+
+				set_entities(object = []) {
+					if (typeof object === 'function') {
+						object = object();
+					}
+					this.entities = object || [];
+				}
+
+				set_geometry(object = []) {
+					if (typeof object === 'function') {
+						object = object();
+					}
+					this.geometry = object || [];
+				}
+			}
+
+			const desktop = new DesktopApps('#desktop_apps_list');
+			const saueracle_explorer = new TreeExplorer();
+
+			window.onload = () => {
+				document.title = _app_name;
+				let div_start_menu = document.createElement('div');
+				div_start_menu.innerHTML = `
+					<h2>Welcome to ${_app_name == 'SaueracleOS' ? _app_name : `${_app_name}, a SaueracleOS modification`}</h2><br>
+					<p> SaueracleOS was put together by <a href="https://salatielsauer.github.io/" target="_blank" onclick="_fix_link_redirect(this)">@SalatielSauer</a>, who takes no responsibility for any dubious content found here, it's all the robots' fault.<br>If you don't know what this is all about, download <a href="http://sauerbraten.org/" target="_blank" onclick="_fix_link_redirect(this)">sauerbraten.org</a> and join <a href="https://discord.gg/j3kyxtj" target="_blank" onclick="_fix_link_redirect(this)">this discord channel</a>.<br><br>Special thanks to <a href="https://github.com/cfoust" target="_blank" onclick="_fix_link_redirect(this)">@Caleb Foust</a> for providing <a href="https://github.com/cfoust/sour" target="_blank">Sour</a>, the web version of Sauerbraten.<br><br>Special thanks to <a href="https://github.com/AngrySnout" target="_blank" onclick="_fix_link_redirect(this)">@AngrySnout</a> for providing the <a href="https://github.com/AngrySnout SauerTracker" target="_blank" onclick="_fix_link_redirect(this)">SauerTracker</a> API.</p><br>
+					<h2>The creativity waypoint</h2><br>
+					${_app_name} is a set of tools designed for creating and managing content for ${_app_subject_name_short} using a generative language model. It originally runs on the Websim platform, which provides free access to the Claude AI model through its generative API.
+					<br><br>
+					<strong>Map Generation</strong><br>
+					Using 'Josias the Mapper', you have access to an embedded JSOCTA (a JS class that allows you to convert json to valid .ogz files), the 'Josias' bot receives any text instruction and does the entire process of generating the formula needed to generate the map for download.
+
+				`
+				let start_menu = desktop.addWindow(`Welcome to ${_app_name} v${_app_version}`, div_start_menu, _icon_main, 400, 800, 200, 130, true);
+				start_menu.body.querySelector('.app_window_header').style.pointerEvents = 'none';
+				start_menu.body.style.display = 'none';
+				start_menu.body.style.top = 'unset';
+				start_menu.body.style.bottom = '0px';
+				start_menu.body.style.transform = 'unset';
+				start_menu.body.style.resize = 'unset';
+				start_menu.open = false
+			}
+
+			// System Info
+			desktop.addIcon('Computer Info', _icon_info, (e, iconImage) => {
+				let api = new APIFetchContextual(_api_endpoint_htmlgenerator)
+			    let div = desktop._nelement('div');
+			    let computer_info = desktop.addWindow(`Computer Info - ${_app_name} v${_app_version}`, div, iconImage, 733, 574, 550, 120);
+				let default_html_generator_prompt = `Generate a detailed report about the current 'computer hardware' and 'software', including CPU, RAM, GPU, operating system, and installed programs. Format the response in HTML (add inline css to the elements, prefer dark-mode style), no Markdown. Include emojis. The operating system is ${_app_name}, make subtle references to ${_app_subject_name}, do not include explanations in parentheses. Include info about current page windows/apps too. Include parody benchmark stats of all kinds.`
+				
+				computer_info.loading(true);
+				get_computer_info();
+
+				function get_computer_info(attempts = 0) {
+					api.post(default_html_generator_prompt, 
+						response => response.json(),
+						data => {
+							if (data.length <= 100) {
+								if (attempts >= 5) {
+									div.innerHTML = `<h2>💻🔨 Running benchmark tests...</h2><br><h2>Failed, Please restart this application to try again.</h2>`
+									return;
+								};
+								div.innerHTML = `<h2>💻🔨 Running benchmark tests...</h2>`
+								computer_info.loading(true);
+								get_computer_info(attempts++)
+								return;
+							}
+							div.innerHTML = data.replace(/^`+|`+$/g, '');
+							computer_info.loading(false);
+						},
+						error => {
+							console.error('Failed to process API request', error);
+						}
+					);
+				}
+			});
+
+			// Server Browser, Server Preview & Player Profile Generator
+			desktop.addIcon('Server Browser', _icon_server, (e, iconImage) => {
+				let api = new APIFetchContextual(_api_endpoint_htmlgenerator);
+				let api_tracker_servers = new APIFetchContextual(_api_endpoint_gametracker_servers);
+				let tracker_servers_active = [];
+				let div = desktop._nelement('div');
+				div.style.textAlign = 'center';
+
+				// Window: Server Browser
+				let window_server_browser = desktop.addWindow('Server Browser - Powered by <img class="app_window_icon" src="https://sauertracker.net/images/squid.png"><a href="https://sauertracker.net/" target="_blank">Sauertracker.net</a>', div, iconImage, 512, 512, 550, 120);
+				window_server_browser.loading(true);
+				api_tracker_servers.get(
+					response => response.json(),
+					data => {
+						tracker_servers_active = data.filter(server => server.clients > 0);
+						api.post(`Create an HTML-formatted list of cards containing the ${_app_subject_name_short} servers: ${JSON.stringify(tracker_servers_active)} (if it is empty, make up some creative ones). Format the response in HTML (add inline css to the elements, prefer dark-mode style, make sure the elements are clickable, not markdown.) add a footnote funfact about Cube 2 (unrelated to pot roast) or the servers or the activity status. Add emojis. If servers are not empty: add onclick="window.custom_bind_showServerInfo(event, 'ip here', 'port here', 'description with emojis')", no escaping.`,
+							response => response.json(),
+							data => {
+								let newdiv = desktop._nelement('div');
+								newdiv.innerHTML = data.replace(/^`+|`+$/g, '');
+								div.appendChild(newdiv);
+								window_server_browser.loading(false);
+							},
+							error => {
+								_alert_gif(`${error}`)
+								tracker_servers_active.forEach(server => {
+									let p = document.createElement('p');
+									p.style.backgroundColor = '#141414';
+									p.style.padding = '10px';
+									p.style.borderStyle = 'solid';
+									p.style.borderWidth = '1px';
+									p.style.boxShadow = '0 0 7px black';
+									p.innerHTML += `📡${server.descriptionStyled}`;
+									div.appendChild(p);
+								})
+								window_server_browser.loading(false);
+								//div.innerHTML = `Websim API error: <h2>${error}</h2><br><p>Sauertracker response: ${JSON.stringify(tracker_servers_active)}</p>`;
+							}
+						);
+					},
+					error => {
+						div.innerHTML = `Sauertracker error: <h2>${error}</h2>`;
+					}
+				);
+
+				// Window: Player Profile Preview
+				let div_find_player_container = desktop._nelement('div');
+
+				let input_player_name = desktop._nelement('input');
+				input_player_name.type = 'text';
+				input_player_name.placeholder = 'Player Name';
+				input_player_name.className = '_app_chat_textarea';
+
+				let button_find_player = desktop._nelement('button');
+				button_find_player.className = '_app_button';
+				button_find_player.textContent = 'Find Player Profile';
+
+				button_find_player.addEventListener('click', (e) => {
+					console.log('finding profile')
+					let div_profile = desktop._nelement('div');
+					let api_tracker_player = new APIFetchContextual(`${_api_endpoint_gametracker_player}/${input_player_name.value}`);
+					let window_player_profile = desktop.addWindow(`👤 ${input_player_name.value}'s not-so-true Profile`, div_profile, iconImage, 600, 312, e.clientX, e.clientY);
+					window_player_profile.subIcon = '👤';
+					window_player_profile.loading(true);
+
+					api_tracker_player.get(
+						response => response.json(),
+						data => {
+							api.post(`Create an standalone HTML-formatted card containing a cool profile with infos about the following player: ${data} (if it's empty, make up a creative one for ${input_player_name.value}). Add emojis. Put some bar graphs. Do not add avatar images. Format the response in HTML (add inline css to the elements, prefer dark-mode style), make a footnote funfact about the player. The stats must be true, you can like everything else, just don't go overboard with lies.`,
+								response => response.json(),
+								data => {
+									div_profile.innerHTML = data.replace(/^`+|`+$/g, '');
+									window_player_profile.loading(false);
+								}
+							)
+						}
+					);
+				})
+
+				div_find_player_container.appendChild(input_player_name);
+				div_find_player_container.appendChild(button_find_player);
+				div.appendChild(div_find_player_container);
+
+				// Window: Server Preview
+				window.custom_bind_showServerInfo = (e, ip, port, description) => {
+					console.log(e.clientX, e.clientY, )
+					let api_tracker_server = new APIFetchContextual(`${_api_endpoint_gametracker_server}/${ip}/${port}`);
+					let div = desktop._nelement('div');
+					let window_server_preview = desktop.addWindow(`${description} - ${ip}:${port}`, div, iconImage, 600, 312, e.clientX, e.clientY);
+					window_server_preview.subIcon = '🖥️';
+					window_server_preview.loading(true);
+
+					api_tracker_server.get(
+						response => response.json(),
+						data => {
+							api.post(`Create an standalone HTML-formatted card containing info about the following server: ${JSON.stringify(data)} (if it's empty, make up a creative one). Add emojis. List all Players with their stats etc. Format the response in HTML (add inline css to the elements, prefer dark-mode style), make a footnote funfact. set a background cover for the server with the link ${_api_endpoint_gametracker_mapshots}/MAPNAME.jpg`,
+								response => response.json(),
+								data => {
+									div.innerHTML = data.replace(/^`+|`+$/g, '');
+									window_server_preview.loading(false);
+								}
+							)
+						},
+						error => {
+							//div.innerHTML = `Sauertracker Server error: <h2>${error}</h2>`;
+							div.innerHTML = 'Failed to request Sauertracker data';
+							_alert_gif(error)
+							
+						}
+					);
+				}
+
+			})
+
+			function _loopfiles_open(e, iconImage) {
+				let api = new APIFetchContextual(_api_endpoint_filegenerator);
+				let loopfiles_div = desktop._nelement('div');
+				let loopfiles_window = desktop.addWindow('LoopFiles - The File Explorer loophole', loopfiles_div, iconImage, 712, 456, e.clientX, e.clientY);
+				//loopfiles_window.loading(true);
+				loopfiles_div_icons = document.createElement('div');
+				loopfiles_div_icons.style.display = 'flex';
+				loopfiles_div_icons.style.flexWrap = 'wrap';
+				loopfiles_div_icons.style.maxHeight = '310px';
+				loopfiles_div_icons.style.minHeight = '310px';
+				loopfiles_div_icons.style.overflow = 'auto';
+				
+				function addIcon(title, image, onclick = (e)=>{}) {
+					let div_icon = document.createElement('div');
+					div_icon.className = 'desktop_app';
+					div_icon.style.width = '160px';
+					div_icon.addEventListener('click', (event) => onclick(event));
+
+					let img_icon = document.createElement('img');
+					img_icon.src = image;
+
+					let div_title = document.createElement('div');
+					div_title.className = 'desktop_app_title';
+					div_title.textContent = title;
+
+					div_icon.appendChild(img_icon);
+					div_icon.appendChild(div_title);
+
+					loopfiles_div_icons.appendChild(div_icon);
+					return img_icon;
+				}
+
+				let div_create_item_container = desktop._nelement('div');
+
+				let input_item_name = desktop._nelement('input');
+				input_item_name.type = 'text';
+				input_item_name.placeholder = 'Folder/File name';
+				input_item_name.className = '_app_chat_textarea';
+				input_item_name.style.verticalAlign = 'middle';
+				input_item_name.addEventListener('input', (e) => {
+					if (e.target.value.trim().length == 0) {
+						button_create_item.setAttribute('disabled', '')
+					} else {
+						button_create_item.removeAttribute('disabled')
+					}
+				})
+
+				let button_create_item = desktop._nelement('button');
+				button_create_item.className = '_app_button';
+				button_create_item.textContent = '➕Create';
+				button_create_item.style.fontSize = '11px';
+				button_create_item.style.padding = '5px';
+				button_create_item.setAttribute('disabled', '')
+				button_create_item.addEventListener('click', (e) => {
+					if (input_item_name.value.trim().length == 0) return;
+					saueracle_explorer.createItem(input_item_name.value, +input_item_name.value.includes('.'), `The folder contents must match its name: ${input_item_name.value}`);
+					drawCurrentFolder();
+				})
+
+				div_create_item_container.appendChild(input_item_name);
+				div_create_item_container.appendChild(button_create_item);
+
+				let button_download_folder = desktop._nelement('button');
+				button_download_folder.className = '_app_button';
+				button_download_folder.textContent = '📦 ZIP Folder';
+				button_download_folder.style.fontSize = '11px';
+				button_download_folder.style.padding = '5px';
+				button_download_folder.style.float = 'right';
+				button_download_folder.addEventListener('click', (e) => {
+					saueracle_explorer.downloadCurrentFolder();
+				})
+
+				function drawCurrentFolder() {
+					const isImageFile = filename => /\.(jpg|jpeg|png|gif)$/i.test(filename);
+					let currentPath = saueracle_explorer.contextStack.map((item, index) => `${index != 0 ? '/' : ''}${item.name}`).join('');
+					let hr = document.createElement('hr');
+					hr.style.borderStyle = 'solid';
+					hr.style.borderColor = '#171717';
+					let p = document.createElement('p');
+					loopfiles_div.innerHTML = '';
+					p.style.backgroundColor = '#171717';
+					p.style.minWidth = '50%';
+					p.style.fontSize = 'small';
+					p.style.padding = '2px';
+					p.style.verticalAlign = 'middle';
+					p.innerHTML = `📂<i>${currentPath}</i>`;
+					loopfiles_div.appendChild(button_download_folder);
+					loopfiles_div.appendChild(p);
+					loopfiles_div.appendChild(div_create_item_container);
+					
+					loopfiles_div.appendChild(hr);
+					loopfiles_div_icons.innerHTML = '';
+					loopfiles_div.appendChild(loopfiles_div_icons);
+					if (saueracle_explorer.contextStack.length > 1) {
+						addIcon(saueracle_explorer.contextStack[saueracle_explorer.contextStack.length-2].name, _icon_back, (e) => {
+							saueracle_explorer.returnFolder();
+							console.log('returning to previous folder');
+							drawCurrentFolder();
+							return;
+						})
+					}
+								
+					loopfiles_window.onrefresh = () => { // re-generate current folder
+						const currentNode = saueracle_explorer.contextStack[saueracle_explorer.contextStack.length - 1];
+						loopfiles_window.loading(true);
+						api.post(`return an array of different and plausible ${_app_subject_name_short.toLowerCase()} or system related files and folders with the format [{name, type 0 for folder 1 for file, short context 'description', child: [] (if folder), content: [] (if file)}], keep child and content empty. file names must contain their extension. Do not repeat folders or file names, be creative. Folders come first. The current path is '${currentPath}/${currentNode.name}' Extra info about the parent folder: ${currentNode.description}. Make sure the folder content is consistent with its path and parent name.`,
+							response => response.json(),
+							data => {
+								currentNode.child = data; // directly modify the children of the current node
+								saueracle_explorer.currentContext = currentNode.child; // update the current context to the new children
+								console.log('regenerating folder', data)
+								drawCurrentFolder();
+								loopfiles_window.loading(false);
+							}
+						)
+					}
+
+					saueracle_explorer.currentContext.forEach((item, index) => {
+						let icon = addIcon(item.name, (item.name.includes('.jsocta')) ? _icon_jsocta : (item.type == -1) ? _icon_back : (item.type == 0) ? (item.child.length == 0) ? _icon_folder_empty : _icon_folder : (item.content.length == 0) ? _icon_file_empty : _icon_file, (e) => {
+							if (item.type == 0) { // folder
+								saueracle_explorer.openItemAt(index);
+
+
+								if (item.child.length != 0) {
+									console.log('loading existing folder:', item.child);
+									drawCurrentFolder();
+									loopfiles_window.loading(false);
+									return;
+								}
+
+								//loopfiles_window.loading(true);
+								console.log('generating folder:', item);
+								loopfiles_window.loading(true);
+								api.post(`return an array of plausible ${_app_subject_name_short.toLowerCase()} or system related files and folders with the format [{name, type 0 for folder 1 for file, short context 'description'}], file names must contain their extension. Do not repeat folders or file names be creative. Folders come first. The current path is '${currentPath}/${item.name}' Extra info about the folder you are creating: ${item.description}. Make sure the folder content is consistent with its path and name.`,
+									response => response.json(),
+									data => {
+										console.log('got response', data)
+										data.forEach(item => {
+											saueracle_explorer.createItem(item.name, item.type, item.description);
+										})
+										drawCurrentFolder();
+										loopfiles_window.loading(false);
+									},
+									error => {
+										_alert_gif(error);
+										loopfiles_window.loading(false);
+									}
+								)
+							}
+
+							if (item.type == 1) { // image file
+								const isImageFile = filename => /\.(jpg|jpeg|png|gif)$/i.test(filename);
+								let notepad_div = document.createElement('div');
+								let notepad_window = desktop.addWindow(`📄${_truncate_string(currentPath, 60)}/${_truncate_string(item.name, 30)}`, notepad_div, _icon_file, 1024, 712, e.clientX, e.clientY);
+								notepad_window.loading(true);
+
+								if (isImageFile(item.name)) {
+									notepad_window.subIcon = '🖼️';
+									getImageFile((img) => {
+										img.crossOrigin = 'anonymous';
+										notepad_div.innerHTML = '';
+										notepad_div.appendChild(img);
+
+										let canvas = document.createElement('canvas');
+										canvas.width = img.naturalWidth;
+										canvas.height = img.naturalHeight;
+
+										let ctx = canvas.getContext('2d');
+										ctx.drawImage(img, 0, 0);
+
+										let dataURL = canvas.toDataURL(`image/${item.name.split('.').pop().toLowerCase().replace('jpg', 'jpeg')}`);
+
+										let button_download_img = document.createElement('button');
+										button_download_img.className = '_app_button';
+										button_download_img.textContent = '💾Save Image';
+										button_download_img.addEventListener('click', () => {
+											let fileName = item.name;
+											const url = dataURL;
+											const link = document.createElement('a');
+											link.href = url;
+											link.download = item.name;
+											link.click();
+											URL.revokeObjectURL(url);
+										})
+										notepad_div.appendChild(button_download_img);
+										notepad_window.loading(false);
+									});
+
+									return;
+								}
+
+								// any other file is treated as text (except images).
+
+								notepad_window.subIcon = '📄';
+
+								let textEditor = new TextEditor(notepad_div);
+								textEditor.forceLang = false;
+
+								let div_notepad_menu = document.createElement('div');
+								div_notepad_menu.className = '_detached';
+
+								let button_save_text = document.createElement('button');
+
+								function update_save_button() {
+									if (textEditor.textarea.value != item.content) {
+										button_save_text.textContent = '💾Save File';
+										textEditor.code.style.outlineColor = '#1d64ad';
+										textEditor.code.style.outlineStyle = 'dashed';
+									} else {
+										button_save_text.textContent = '📥Download File'
+										textEditor.code.style.outlineStyle = 'none';
+									}
+								}
+
+								button_save_text.className = '_app_button _app_button_small';
+								button_save_text.addEventListener('click', () => {
+									if (item.content == textEditor.textarea.value) {
+										_download_file(item.name, item.content, 'plain/text');
+										return;
+									}
+									item.content = textEditor.textarea.value;
+									update_save_button();
+								})
+								
+								update_save_button();
+								textEditor.textarea.addEventListener('click', () => { update_save_button(); });
+								textEditor.textarea.addEventListener('input', ()=> { update_save_button(); });
+
+								div_notepad_menu.appendChild(button_save_text);
+
+								// JSOCTA javascript files, displays button for running them.
+								if (item.name.includes('.jsocta')) { 
+									textEditor.forceLang = 'js';
+									let button_run_jsocta = document.createElement('button');
+									button_run_jsocta.className = '_app_button _app_button_small _app_button_detached';
+									button_run_jsocta.textContent = '📦Compile .OGZ';
+									button_run_jsocta.addEventListener('click', () => {
+										let jsocta_map = new JSOCTA_helper();
+
+										item.content = textEditor.textarea.value;
+										
+										let jsocta_user_script = new Function('mapvars', 'entities', 'geometry', _simple_trim(textEditor.textarea.value));
+										jsocta_user_script(jsocta_map.set_mapvars.bind(jsocta_map), jsocta_map.set_entities.bind(jsocta_map), jsocta_map.set_geometry.bind(jsocta_map));
+
+										_jsocta_jsonToOGZ(
+											{
+												"mapvars": jsocta_map.mapvars,
+												"entities": jsocta_map.entities,
+												"geometry": jsocta_map.geometry
+											},
+											log => {
+												console.log('loopfiles jsocta implementation:', log)
+											}, file => {
+												_download_file(item.name.replace('.jsocta', '.ogz'), file.GZIP);
+											}, error => {
+												alert(error)
+											}
+										)
+									})
+									div_notepad_menu.appendChild(button_run_jsocta)
+								}
+
+								if (item.name.includes('.cfg')) {
+									//item.description += '. it must follow the cubescript syntax of `command "argument" [block]` like sensitivity 5; or loop i 10 [echo $i], commands can go without block arguments.';
+									// Only if needed, and if it is an interface, use functional gui* commands too: newgui "myinterface" [guititle "hi"; guibutton "close" [cleargui]; guibar; guilist [guitext "same"; guititle "line"]; guifield yourname 15 [echo (concat "your 15-characters name is" $yourname); name $yourname]], showgui "myinterface"
+									let api_guiscript = new APIFetchContextual(_api_endpoint_htmlgenerator)
+									//textEditor.forceLang = 'js';
+									let button_run_guiscript = document.createElement('button');
+									button_run_guiscript.className = '_app_button _app_button_small _app_button_detached';
+									button_run_guiscript.textContent = '👁️‍🗨️Preview GUI';
+									button_run_guiscript.addEventListener('click', (e) => {
+										notepad_window.loading(true);
+										api_guiscript.post(`Return a GUI that follows the user's script input: "${textEditor.textarea.value}". the response must follow the format {body, title}. Try your best to make functional features with javascript, add inline css to the elements, prefer dark-mode style, wrap everything in an iframe. Include emojis. Make the width/height size be enough to fit the content.`,
+											response => response.json(),
+											response => {
+												notepad_window.loading(false);
+												if (!response) return;
+												let guiscript_div = document.createElement('div');
+												guiscript_div.innerHTML = `<p>this ${_app_name.toLowerCase()} feature is unfinished and you shouldn't be seeing it</p><br>` + response.body;
+												let guiscript_window = desktop.addWindow(`📄${response.title}`, guiscript_div, _icon_file, 512, 512, e.clientX, e.clientY);
+												
+											},
+											error => {
+												_alert_gif(error);
+												notepad_window.loading(false);
+											}
+										)
+									})
+									div_notepad_menu.appendChild(button_run_guiscript)
+								}
+
+								notepad_div.appendChild(div_notepad_menu);
+
+								if (item.content.length != 0) {
+									textEditor.textarea.value = item.content;
+									notepad_window.loading(false);
+									textEditor.refreshHighlight();
+									return;
+								}
+
+								function processChunks(data) {
+									if (!Array.isArray(data)) {
+										data = [data];
+									}
+
+									let offset = 0;
+									data.forEach(chunk => {
+										const startIdx = textEditor.textarea.value.indexOf(chunk.start, offset);
+										const endIdx = textEditor.textarea.value.indexOf(chunk.end, startIdx + chunk.start.length) + chunk.end.length;
+
+										if (startIdx === -1 || endIdx === -1) return;
+
+										textEditor.textarea.value = textEditor.textarea.value.substring(0, startIdx) +
+																	chunk.content +
+																	textEditor.textarea.value.substring(endIdx);
+
+										offset = startIdx + chunk.content.length;
+									});
+
+									item.content = textEditor.textarea.value;
+								}
+
+								function get_text_content() {
+									notepad_window.loading(true);
+									let text_prompt;
+									if (textEditor.textarea.value.length != 0) {
+										text_prompt = `return a single array containing a sequence of 'chunks' of plain text of a plausible content in the format [{start, end, content: '...'}], the start and end are keywords that will be replaced (and everything in between), they represents the start and end of the area that you want to continue, fix, or adapt in the text: '${textEditor.textarea.value}', stick to smart changes, no need to replace the entire text. Extra info about the file you are fixing: Path: '${currentPath}/${item.name}', Description: ${item.description}`;
+									} else {
+										text_prompt = `return a single object containing a plain text of a plausible content in the format {content: '...'} for the file '${currentPath}/${item.name}'. Extra info about the file you are creating: ${item.description}.`;
+									}
+									api.post(text_prompt,
+										response => {
+											console.log('first response:', response);
+											return response.json();
+										},
+										data => {
+											console.log('last response', data);
+											if (textEditor.textarea.value.length !=0) {
+												processChunks(data);
+											} else {
+												textEditor.textarea.value = data.content;
+												item.content = data.content;
+											}
+											notepad_window.loading(false);
+											textEditor.refreshHighlight();
+											drawCurrentFolder();
+										},
+										error => {
+											_alert_gif(error);
+											notepad_window.loading(false);
+										}
+									)
+								}
+								get_text_content();
+								notepad_window.onrefresh = ()=> get_text_content();
+							}
+						});
+
+						// generate image
+						if (isImageFile(item.name)) {
+							if (!item.content) {
+								icon.src = `fakeimg.pl/${currentPath}/${item.name}`;
+								icon.src = _icon_file;
+								icon.onload = (e) => {
+									item.content = icon;
+									console.log('custom icon loaded', item.content);
+								}
+							}
+
+							icon.src = item.content.src;
+							icon.alt = `${currentPath}/${item.name} (${item.description})`;
+						}
+
+						function getImageFile(callback  = ()=>{}) {
+							let img = document.createElement('img');
+							img.src = icon.src;
+							img.alt = `opengl fps in-game screenshot or asset: ${currentPath}/${item.name} (${item.description})`;
+							//img.width = Math.floor(Math.random() * (512 - 16 + 1)) + 16;
+							//img.height = Math.floor(Math.random() * (512 - 16 + 1)) + 16;
+							img.style.width = '80%';
+							//img.style.height = '80%';
+							img.style.left = '10%';
+							img.style.top = '10%';
+							img.style.boxShadow = '3px 5px 13px #0000006e';
+							img.style.filter = 'saturate(1.2)';
+							img.style.position = 'absolute';
+							img.onload = () => callback(img);
+						}
+					})
+				}
+				drawCurrentFolder()
+			};
+			desktop.addIcon('LoopFiles Explorer', _icon_folder, (e, iconImage) => _loopfiles_open(e, iconImage));
+
+			desktop.addIcon('Cubicle', _icon_chat, (e, iconImage) => {
+				let chat = new ChatWindow('cubicle');
+				let cubicle = new APIFetchContextual(_api_endpoint_chatgenerator);
+				let cubicle_window = desktop.addWindow('Cubicle - Sauerworld', chat.div_chat, iconImage, 712, 456, e.clientX, e.clientY);
+
+				function bot_pushMessage(user, message) {
+					_cubicle_simulate_typing(message, processed => {
+						chat.pushMessage(user, processed);
+					}, chat);
+				}
+
+				if (_cubicle_initial_context.length == 0) {
+					chat.showStatus('<span class="extra_spin">↻</span> Loading previous messages...');
+					cubicle_window.loading(true);
+					cubicle.post(`Return an array of ongoing ${_app_subject_name} - related messages with the format [{name, message}], where the name is a player name with maximum of 15 characters. You can use parody of real sauer player names (replace some character or make an adaptation). The conversation must be centered around a random sauer topic. Each user expresses themselves differently and has their own personality.`,
+						response => response.json(),
+						data => {
+							chat.showStatus('💬Someone is typing...');
+							data.forEach((user, index) => {
+								const timeOffsetSeconds = (index * 30) - (data.length * 30);
+								if (index <= Math.floor(Math.random() * data.length-1)) {
+									chat.pushMessage(user.name, user.message, chat.parent, timeOffsetSeconds)
+								} else {
+									bot_pushMessage(user.name, user.message);
+								}
+							})
+							_cubicle_initial_context = data;
+							cubicle_window.loading(false);
+						}
+					);
+				} else {
+					_cubicle_initial_context.forEach(user => {
+						chat.pushMessage(user.name == 'user' ? -1 : user.name, user.message);
+					})
+					cubicle.post(`From context: '${_cubicle_initial_context.map(m => `"${m.name}: ${m.message}"`).join()}', Return a single ${_app_subject_name.toLowerCase()} - related message object with format {name, message}, where the name is a player name with maximum of 15 characters, continue the ongoing conversation, feel free to join someone new etc.`,
+						response => response.json(),
+						data => {
+							bot_pushMessage(data.name, data.message);
+							_cubicle_initial_context.push(data);
+							
+						}
+					)
+				}
+				function sendInput() {
+					if (chat.textarea_chat.value.trim().length == 0) return;
+					chat.pushMessage(-1, chat.textarea_chat.value);
+					if (_cubicle_activeTypingCount == 0) {
+						setTimeout(() => {
+							chat.showStatus('💬Someone is typing...');
+						}, Math.random() * 1500 + 100);
+					}
+					_cubicle_initial_context.push({name: 'user', message: chat.textarea_chat.value});
+
+					cubicle.post(`From context: '${_cubicle_initial_context.map(m => `"${m.name}: ${m.message}"`).join()}', Return one o more ${_app_subject_name.toLowerCase()} - related message array with format [{name, message}], always follow the conversation flow set by the user, if he directs a message to someone, make sure that person replies, others may talk to each other etc. feel free to join someone new etc. 'User' is the real user, try to avoid mentioning his name if the user don't say it. 'shoot better' and the fact that sauer takes too long to get a new release are common jokes. Each user expresses themselves differently and has their own personality.`,
+						response => response.json(),
+						data => {
+							data.forEach((user, index) => {
+								bot_pushMessage(user.name, user.message);
+								_cubicle_initial_context.push({name: user.name, message: user.message});
+							})
+						}
+					)
+					chat.textarea_chat.value = '';
+				}
+				chat.button_send.addEventListener('click', () => {
+					sendInput();
+				});
+				chat.textarea_chat.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter' && !e.shiftKey) {
+					    e.preventDefault(); 
+					    sendInput();
+					}
+				});
+
+			})
+			// desktop.addIcon('GuiScript', 'https://i.imgur.com/IBCW4P3.jpeg', (e) => {console.log('show guiscript', e)})
+			desktop.addIcon(`Josias The Mapper`, _icon_josias, (e, iconImage) => {
+				let chat = new ChatWindow('josias');
+				let josias = new APIFetch(_api_endpoint_functiongenerator);
+				window.josias_js_history = [];
+				window.josias_replying = false;
+
+				//let josias_base_prompt = `_addCube returns an array as the cube. Each cube measures 4x4, within a 1024 cube octree. No overlapping cubes. Texture indexes are from 0 to 1704. Include the function and ';return genGeometry();' in one scope. Center structure at 512,512,512. Z is up. Minifiy the javascript. Be Smart & Creative. Textures: 1 default, 2 grass, 767 grass2, 6 wall, 831 yellow, 832 red, 833 blue, 834 green, 777 black. If asked, use _addGround(texture) to add a ground to the bottom part of the map. Finish your response with the return genGeometry(). Make sure you don't get max call stack errors. Always return a flat array of objects.`
+
+				let josias_base_prompt = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Use math to craft a JS formula that concats _addCube(x, y, z, texture) to build a 3D map for ${_app_subject_name_short}. Your function body must return the formula result. _addCube returns an array that defines the cube properties. Each cube measures 4x4, within a 1024 cube octree world. No overlapping cubes. Texture indexes are from 0 to 1704. Center structure at 512,512,512. Z is up. Be Smart & Creative, prefer structures with a greater number (less than 500000) of cubes and well detailed. Some textures: 1 default, 2 grass, 767 grass2, 6 wall, 831 yellow, 832 red, 833 blue, 834 green, 777 black. Do not return any plain text. You must only return the formula result. IF solicited, use the helper function _addText(text, x, y, z) to generate a 3D text at the given position or _addGround(texture) to add 4 512x512 cubes at the bottom part of the map. Do not add texts nor ground if not requested by the user. Your function must always return an array.`;
+
+				let josias_base_prompt_simple = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Use math to craft a JS formula that concats _addCube(x, y, z, texture) to build a 3D map for ${_app_subject_name_short}. Your function body must return the formula result. _addCube returns an array that defines the cube properties. Each cube measures 4x4, within a 1024 cube octree world. No overlapping cubes. Texture indexes are from 0 to 1704. Center structure at 512,512,512. Z is up.`;
+
+				let josias_base_prompt_tryhard = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Create a JavaScript math formula that constructs a 3D map for ${_app_subject_name_short} using the function _addCube(x, y, z, texture). Each cube is 4x4 within a 1024 cube octree, centered at (512, 512, 512) with 'z' as the vertical axis. The function must return the array of cubes created, ensuring no overlapping cubes and using texture indexes from 0 to 1704. Consider these texture examples: 1 (default), 2 (grass), 767 (grass2), 6 (wall), 831 (yellow), 832 (red), 833 (blue), 834 (green), and 777 (black). Minimize your JavaScript code for efficiency. Optionally, employ _addText(text, x, y, z) for 3D text or _addGround(texture) for ground textures, but only if specified. The final result should be visually appealing and functional.`
+
+				let josias_window = desktop.addWindow(`Josias The Mapper <button class='_app_button _app_button_small' onclick='window._josias_openWithLoopfiles("JSOCTA", event)'>📁 Open LoopFiles</button>`, chat.div_chat, iconImage, 712, 456, e.clientX, e.clientY);
+				let josias_response_attempts = 0;
+				function formatDate() {
+					return new Date().toISOString().replace(/-|:|T|\.\d+Z/g, '');
+				}
+
+				josias.onfirstresponse = (r => r.json())
+				josias.onlastresponse = (r => {
+					chat.showStatus(false)
+					function josias_failed(error) {
+						console.log('josias receivend an error', error);
+						josias_fixit(`❌😞 I was unable to make the map file (${error}), let's try again.`);
+					}
+				
+					function josias_done() {
+						josias_window.loading(false);
+						chat.showStatus(false);
+
+						chat.pushMessage('Josias', `✅🤓 I finished our map! <button class='_app_button' onclick='_josias_download_ogz(${_jsocta_gzip_history.length-1})'>💾Get OGZ</button> <button class='_app_button _app_button_small' onclick='josias_reply(${window.josias_js_history.length})'>↩️</button>`);
+
+						window.josias_reply = (id) => {
+							const entry = window.josias_js_history[id];
+							chat.showStatus(`➡️<i>${_pretty_trim(entry.source.textContent, 50)}</i> (${entry.resultLength} cubes), and:`, true);
+							window.josias_replying = entry;
+							chat.textarea_chat.focus();
+						}
+
+						window.josias_js_history.push({
+							'source': chat.lastMessageBy(-1),
+							'javascript': r.body,
+							'resultLength': generated_javascript.length
+						})
+					}
+
+					//console.log(r)
+					let generated_javascript = new Function(_simple_trim(r.body))();
+					console.log('josias reply', r);
+					console.log('generated js result:', generated_javascript);
+
+					if (typeof generated_javascript !== 'undefined' && typeof generated_javascript.length !== 'undefined') {
+						if (generated_javascript.length == 0) return;
+						chat.pushMessage('Josias', `${(generated_javascript.length >= 100) ? `🧐 I painstakingly tallied ${generated_javascript.length} cubes one-by-one, I'll make the map now 🙃` : `You won't believe me if I tell you this only cost ${generated_javascript.length} cubes 🙈`}`)
+
+						let tmp_map = new JSOCTA_helper();
+						tmp_map.mapvars = {
+							"skybox": "penguins/yonder",
+							"maptitle": `6Map generated by bot 8Josias 6from 8${_app_name} 6(5websim.ai/@SalatielSauer6) using 8${generated_javascript.length || 0} 6cubes. \n>>8Prompt: 7${window.josias_replying ? `"${window.josias_replying.source.textContent}" 6+ 7` : ''} "${chat.lastMessageBy(-1).textContent}"`
+						}
+						tmp_map.geometry = generated_javascript;
+
+						saueracle_explorer.pushFile(`JSOCTA/josias-script_${formatDate()}.jsocta`, `/*request: '${chat.lastMessageBy(-1).textContent}'*/\nmapvars(${JSON.stringify(tmp_map.mapvars)})\ngeometry(()=>{\n${r.body}\n})`);
+
+						// todo: fix window.josias_replying to display the last prompt and the current prompt in the maptitle
+						_jsocta_jsonToOGZ({
+							"mapvars": tmp_map.mapvars,
+							"entities": tmp_map.entities,
+							"geometry": tmp_map.geometry
+							}, log => {
+								chat.showStatus(`<span class="extra_spin">↻</span> ${log}`)
+							}, done => {
+								josias_done();
+							}, error => {
+								josias_failed(error)
+							}
+						);
+						josias_response_attempts = 0;
+						return;
+					}
+
+					josias_fixit(`❌😞 I failed, I was unable to calculate a reasonably high-quality map.`, _simple_trim(r));
+				})
+
+				josias.onerror = (r => {
+					console.log('josias-onerror', r.message);
+					if (r.message.includes('Per-minute')) {
+						chat.pushMessage('Josias', `I tried, but it seems you've hit the fun barrier imposed by WebSim 🤪<br><br>Meanwhile, you can play with some .jsocta files in <button class='_app_button _app_button_small' onclick='window._josias_openWithLoopfiles("JSOCTA", event)'>📁LoopFiles</button>`)
+						chat.showStatus("🕒try again later");
+						josias_window.loading(false);
+						return;
+					};
+
+					let button_josias_fixit = document.createElement('button');
+					button_josias_fixit.className = '_app_button';
+					if (r.message.includes('Generative API is not allowed')) {
+						button_josias_fixit.textContent = `❌😐 you... left me alone, I can only work while you watch me. Try Again! 🤖`;
+					} else {
+						button_josias_fixit.textContent = `❌😞 Something went wrong (${r}), Try Again?`;
+					}
+					button_josias_fixit.addEventListener('click', () => josias_fixit('❌🤔 yeah, still no luck, try later maybe?'));
+					chat.showStatus(false);
+					josias_fixit(button_josias_fixit)
+				})
+
+				function josias_fixit(fail, solution = '') {
+					console.log('josias is trying to fix', solution.length, josias_response_attempts)
+					josias_window.loading(true);
+					chat.showStatus('<span class="extra_flip">⌛</span> 🤔 Josias is trying to fix its solution..')
+					if (josias_response_attempts >= 10) {
+						josias_window.loading(false);
+						chat.pushMessage('Josias', fail)
+						josias_response_attempts = 0;
+						chat.showStatus(false);
+						return;
+					}
+
+					chat.pushMessage('Josias', `${_random_array([`📐 Drawing a geometrically precise map!1`, `🤓 Assessing the situation...`, `🧠 Engaging my superior intellect...`, `🛸 Deploying alien technology...`, `🕵️‍♂️ Borrowing brilliance from community archives...`])} (${josias_response_attempts}/10)`)
+					josias.post(`${(josias_response_attempts < 5) ? josias_base_prompt : josias_base_prompt_simple}. User request: ${chat.lastMessageBy(-1).textContent}. Your broken solution: ${solution}. Your last attempt didn't work, fix the function to make sure it won't return undefined values.`)
+					josias_response_attempts += 1;
+				}
+
+				function sendInput() {
+					if (chat.textarea_chat.value.trim().length == 0) return;
+					let lastInputParent = chat.pushMessage(-1, chat.textarea_chat.value);
+
+					if (window.josias_replying) {
+						let replyIndicator = document.createElement('span');
+						replyIndicator.style.fontSize = '8px';
+						replyIndicator.style.color = 'grey';
+						replyIndicator.textContent = `➡️${_pretty_trim(josias_replying.source.textContent, 25)}`;
+						replyIndicator.innerHTML += '<br>';
+						console.log('last input parent', lastInputParent)
+						lastInputParent.insertBefore(replyIndicator, lastInputParent.firstChild);
+
+						console.log('last input parent', lastInputParent)
+						console.log(`User input: ${window.josias_replying.source.textContent} + ${chat.textarea_chat.value}`);
+						josias.post(`'${window.josias_replying.javascript}' adapt, modify or expand this formula, and ${chat.textarea_chat.value}`);
+						window.josias_replying = false;
+						chat.showStatus('<span class="extra_spin">↻</span> Josias is adapting previous map..');
+					} else {
+						console.log('User input:', chat.textarea_chat.value);
+						josias.post(`User request: ${chat.textarea_chat.value}. ${josias_base_prompt}`);
+						chat.showStatus('<span class="extra_spin">🧩</span> Josias is mathventuring a new map..');
+					}
+					chat.textarea_chat.value = ''; // Clear the textarea after sending the message
+					josias_window.loading(true);
+					
+				}
+
+				chat.button_send.addEventListener('click', (e) => {
+					sendInput();
+				});
+
+				chat.textarea_chat.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter' && !e.shiftKey) {
+					    e.preventDefault(); // Prevent the default action to avoid a new line
+					    sendInput();
+					}
+				});
+
+				chat.pushMessage('Josias', '🤖 beep bop, what are your orders?')
+	
+			})
+			// desktop.addIcon('Play Sauerbraten', 'https://i.imgur.com/QR97Xra.png', (e) => {console.log("show sour", e)})
+			// desktop.addIcon('Guistore App Manager', 'https://i.imgur.com/C5Smnox.jpeg', (e) => {console.log("show guistore", e)})
+
+			desktop.drawIcons();
+
+			interact('.app_window_header').draggable({
+				listeners: {
+					start (event) { },
+					move (event) {
+						let parent = event.target.parentNode;
+						if (parent.getAttribute('force') == 'true') return;
+
+						let x = (parseInt(parent.getAttribute('pos_x')) || 0) + event.dx;
+						let y = (parseInt(parent.getAttribute('pos_y')) || 0) + event.dy;
+
+						// calculate boundaries allowing half of the element to go out of the viewport except for the top
+						let minX = -parent.offsetWidth / 2;
+						let maxX = window.innerWidth - parent.offsetWidth / 2;
+						let minY = 0;  // no negative value for y as we don't allow top half to go out
+						let maxY = window.innerHeight - parent.offsetHeight / 2;
+
+						// apply boundaries
+						x = Math.max(minX, Math.min(maxX, x));
+						y = Math.max(minY, Math.min(maxY, y));
+
+						x = Math.round(x);
+						y = Math.round(y);
+						parent.setAttribute('pos_x', x);
+						parent.setAttribute('pos_y', y);
+
+						event.target.parentNode.style.transform = `translate(${x}px, ${y}px)`;
+					},
+				}
+			});
+
+			let _cubicle_initial_context = []; // stores cubicle messages
+			let _cubicle_lastMessageTime = 0; // track when the last message was scheduled to appear
+			let _cubicle_activeTypingCount = 0; // counter to track active typing simulations
+			function _cubicle_simulate_typing(message, callback, chat) {
+				// increase the count of active typing simulations
+				_cubicle_activeTypingCount++;
+
+				// calculate the delay: base delay of 1500ms + 150ms for each character in the message + a random additional 0-2500ms
+				let delay = 1500 + message.length * 150 + Math.floor(Math.random() * 2500);
+
+				// schedule the new message to appear after the last scheduled message
+				let nextMessageTime = Math.max(Date.now(), _cubicle_lastMessageTime) + delay;
+				_cubicle_lastMessageTime = nextMessageTime;
+
+				setTimeout(() => {
+					callback(message);
+					// immediately hide the status when the message is displayed
+					chat.showStatus(false);
+
+					// decrease the count of active typing simulations
+					_cubicle_activeTypingCount--;
+					
+					// if there are more messages to simulate, show the status again after a delay
+					if (_cubicle_activeTypingCount > 0) {
+						setTimeout(() => {
+							chat.showStatus('💬Someone is typing...');
+						}, delay/2);
+					}
+				}, nextMessageTime - Date.now());
+			}
+
+			function _simple_trim(inputString) {
+				// targets quotation marks at the start and end of the string
+				return inputString.replace(/^['"`]+|['"`]+$/g, "");
+			}
+
+			function _pretty_trim(text, maxLength) {
+				if (text.length <= maxLength) {
+					return text;
+				}
+
+				// find the last space within the allowed length
+				const trimmedText = text.slice(0, maxLength + 1);
+				const lastSpaceIndex = trimmedText.lastIndexOf(' ');
+
+				// if there's a space, trim to the last word; otherwise, just trim normally
+				if (lastSpaceIndex > 0) {
+					return trimmedText.slice(0, lastSpaceIndex) + '...';
+				}
+
+				return trimmedText.slice(0, maxLength) + '...';
+			}
+
+			function _addGround(af) {
+				return [{x: 0, y: 0, z: 0, g: 9, af}, {x: 512, y: 0, z: 0, g: 9, af}, {x: 512, y: 512, z: 0, g: 9, af}, {x: 0, y: 512, z: 0, g: 9, af}]
+			}
+
+			function _addCube(x, y, z, af, g = 2) {
+				return {x, y, z, 'g': g, af};
+			}
+
+			// JSOCTA helper function for creating a 3D line of cubes between two points, considering gridpower
+			function _jsocta_lineTo(startX, startY, startZ, endX, endY, endZ, g = 2, event = null) {
+				const maxDimension = 1024;
+				const cubes = [];
+				const cubeSize = Math.pow(2, g);  // cube size determined by grid power
+
+				// ensure end coordinates do not exceed the maximum dimension of the world
+				endX = Math.min(endX, maxDimension);
+				endY = Math.min(endY, maxDimension);
+				endZ = Math.min(endZ, maxDimension);
+
+				// calculate steps needed for each coordinate axis
+				const dx = Math.abs(endX - startX);
+				const dy = Math.abs(endY - startY);
+				const dz = Math.abs(endZ - startZ);
+				const xs = startX < endX ? cubeSize : -cubeSize;
+				const ys = startY < endY ? cubeSize : -cubeSize;
+				const zs = startZ < endZ ? cubeSize : -cubeSize;
+
+				// determine which axis requires the most steps
+				const n = Math.max(dx, dy, dz) / cubeSize;
+
+				for (let step = 0; step <= n; step++) {
+					// calculate the current position along the line
+					const x = startX + xs * step;
+					const y = startY + ys * step;
+					const z = startZ + zs * step;
+
+					// create cube at current position if within bounds
+					if (x < maxDimension && y < maxDimension && z < maxDimension) {
+						const cube = { x, y, z, g: cubeSize, af: 2 };  // af: default texture index, modify in event callback if needed
+
+						// if an event is provided, allow modifications to the cube
+						if (event) {
+							event(cube);
+						}
+						cubes.push(cube);
+					}
+				}
+
+				return cubes;
+			}
+
+			function _random_array(arr) {
+				return arr[Math.floor(Math.random() * arr.length)];
+			}
+			function _truncate_string(str, minLength) {
+				if (str.length <= minLength) {
+					return str;
+				}
+
+				// calculate the number of characters to show from the start and end
+				let partLength = Math.floor(minLength / 3);
+				let start = str.substring(0, partLength);
+				let end = str.substring(str.length - partLength);
+				
+				return `${start}...${end}`;
+			}
+
+			function _fix_link_redirect(element) { // websim workaround (otherwise it will try to generate the page instead of redirecting to it)
+				if (window.parent && window.parent !== window) {
+					window.parent.location.href = element.href;
+				}
+			}
+
+			function _alert_gif(error) {
+				let div_error = document.createElement('div');
+				console.error(error)
+				div_error.innerHTML = `
+					<img src=${_icon_fail}>
+					<div style='color: red'>😭${error}</div>
+					If you continue to see this, please refresh the page or try again later.
+				`
+				let error_window = desktop.addWindow(`❌⚠️❗<strong style='color: red;'>${_app_name} Failed<strong>❌❌⚠️`, div_error, _icon_fail, 612, 450, 300, 100);
+				error_window.subIcon = '❌';
+				error_window.body.style.textAlign = 'center';
+			}
+
+
+			// jsocta worker implemented with a blob due to websim limitations regarding external files:
+
+			const _jsocta_main_string = `
+			/*
+			Minified JSOCTA - Write Cube 2 Sauerbraten maps using JSON.
+			by @SalatielSauer, licensed under ZLIB (https://www.zlib.net/zlib_license.html)
+			*/
+
+			class QuickOGZ {
+			constructor(object) {
+				this.mapsize = object.mapsize || 1024;
+				this.mapvars = object.mapvars || { maptitle: "Untitled map by Unknown" };
+				this.entities = object.entities || [];
+				this.octree = object.geometry || [];
+				this.dataTypes = {
+				mapvar: ["integer", "float", "string"],
+				entity: [
+					"none?", "light", "mapmodel", "playerstart", "envmap", "particles", "sound", "spotlight",
+					"shells", "bullets", "rockets", "riflerounds", "grenades", "cartridges",
+					"health", "healthboost", "greenarmour", "yellowarmour", "quaddamage",
+					"teleport", "teledest",
+					"monster", "carrot", "jumppad",
+					"base", "respawnpoint",
+					"box", "barrel",
+					"platform", "elevator",
+					"flag"
+				]
+				};
+			}
+
+			indexOfEntity(name) {return this.dataTypes.entity.indexOf(name);}
+
+			getString() {
+				return \`4f4354412100000024000000\${this._IH(this.mapsize, 4)}\${this._IH(this.entities.length, 4)}000000000000000000000000\${this._IH(Object.keys(this.mapvars).length, 4)}00000000\${this.format_mapvars()}036670730000000000050002000400030005000700\${this.format_entities()}\${this.format_geometry()}\`.replace(/,/g, "");
+			}
+
+			getByteArray() {
+				return this._HTB(this.getString());
+			}
+
+			format_mapvars() {
+				return Object.keys(this.mapvars).map((key, index) => {
+				let mapvar = {name: key, value: Object.values(this.mapvars)[index]};
+				// treats array values as RGB and converts it to decimal
+				if (typeof mapvar.value == "object") {
+					mapvar.value = this._CTI(mapvar.value);
+				};
+				mapvar.type = this.getTypeofVar(mapvar.value);
+				// int/float: type + name length + name + value
+				//   string: type + name length + name + value length + value
+				return (
+					this._IH(this.dataTypes.mapvar.indexOf(mapvar.type), 1) +
+					this._IH(mapvar.name.length, 2) +
+					this._STH(mapvar.name) +
+					(mapvar.type == "integer"
+					? this._IH(mapvar.value, 4)
+					: mapvar.type == "float"
+					? this._FTH(mapvar.value)
+					: this._IH(mapvar.value.length, 2) + this._STH(mapvar.value))
+				);
+				});
+			}
+
+			format_entities() {
+				return this.entities.map((entity) => \`\${this._FTH(entity.x||0)}\${this._FTH(entity.y||0)}\${this._FTH(entity.z||0)}\${this._IH(entity.at0||0, 2)}\${this._IH(entity.at1||0, 2)}\${this._IH(entity.at2||0, 2)}\${this._IH(entity.at3||0, 2)}\${this._IH(entity.at4||0, 2)}\${this._IH(entity.t||0, 2)}\`);
+			}
+
+			format_geometry() {
+				let octree = new Array(8).fill({t: 1});
+				let cubes = this.octree;
+				let mapsize = this.mapsize;
+				let _IH = this._IH;
+				function subdivide(item, root = 0) {
+				if (Array.isArray(item)) {
+					item = item.concat(Array(8 - item.length).fill({t: 1})); // fills undefined children with empty cubes
+					if (!root) {
+					item.splice(0, 0, {t: 0}); // inserts children indicator
+					}
+					return item.map((item) => subdivide(item)); // reads children recursively
+				}
+				let cube = item || {t: 1};
+				return \`0\${cube.t==0 ? "0" : \`\${cube.t==1 ? "1" : \`3\${8-cube.bk3||8}\${cube.ft2||0}\${8-cube.bk2||8}\${cube.ft3||0}\${8-cube.bk1||8}\${cube.ft0||0}\${8-cube.bk0||8}\${cube.ft1||0}\${8-cube.rt2||8}\${cube.lf3||0}\${8-cube.rt0||8}\${cube.lf1||0}\${8-cube.rt3||8}\${cube.lf2||0}\${8-cube.rt1||8}\${cube.lf0||0}\${8-cube.tp2||8}\${cube.dn0||0}\${8-cube.tp0||8}\${cube.dn2||0}\${8-cube.tp3||8}\${cube.dn1||0}\${8-cube.tp1||8}\${cube.dn3||0}\`}\${_IH(cube.lf||cube.af||1, 2)}\${_IH(cube.rt||cube.af||1, 2)}\${_IH(cube.bk||cube.af||1, 2)}\${_IH(cube.ft||cube.af||1, 2)}\${_IH(cube.dn||cube.af||1, 2)}\${_IH(cube.tp||cube.af||1, 2)}\`}\`;
+				}
+
+				function insert(type, x=0, y=0, z=0, gridpower) {
+				let base_gridpower = (Math.log2(mapsize) | 0) - 1;
+				let level_difference = base_gridpower - gridpower;
+				function insert_cube(tree, idx, level) {
+					if (level === 0) {
+					tree[idx] = type;
+					return;
+					}
+					const powValue = Math.pow(2, 3 * level);
+					let child_idx = Math.floor(idx / powValue);
+					if (tree[child_idx] == {t: 1}) {
+					tree[child_idx] = Array(8).fill({t: 1});
+					} else {
+					if (Array.isArray(tree[child_idx])) {
+						// handles the situation where a cube is added into an existing subdivision that does not have all children defined yet
+						tree[child_idx] = tree[child_idx].concat(Array(8 - tree[child_idx].length).fill({t: 1}));
+					} else {
+						// handles existing neighboring cubes by copying their parent's original properties when subdividing,
+						// has visible effect when trying to edit over a modified edge using a different gridpower
+						tree[child_idx] = Array(8).fill(tree[child_idx] || {t: 1});
+					}
+					}
+					insert_cube(tree[child_idx], idx % powValue, level - 1);
+				}
+				let tree = octree.slice(0, 8);
+				let index = \`\${parseInt((x / (1 << gridpower)).toString(2), 8)+parseInt((y / (1 << gridpower)).toString(2), 8) * 2+parseInt((z / (1 << gridpower)).toString(2), 8) * 4}\`;
+				insert_cube(tree, index, level_difference);
+				return tree;
+				}
+
+				cubes.forEach(cube => {
+				octree = insert(cube, cube.x||0, cube.y||0, cube.z||0, cube.g||0);
+				});
+				
+				return subdivide(octree, 1);
+			}
+
+			_FTH(val) {
+				const getHex = i => \`00\${i.toString(16)}\`.slice(-2);
+				const view = new DataView(new ArrayBuffer(4));
+				view.setFloat32(0, val);
+				return Array.apply(null, {length: 4}).map((_, i) => getHex(view.getUint8(i))).reverse().join("");
+			}
+			_IH(val, byte) {
+				val = parseInt(val).toString(16).padStart(byte * 2, '0');
+				let result = '';
+				for (let i = 0; i < byte * 2; i += 2) {
+				result = val.substr(i, 2) + result;
+				}
+				return result;
+			}
+			_HTB(val) {
+				const length = val.length / 2;
+				const result = new Uint8Array(length);
+				for (let i = 0; i < length; i++) {
+				result[i] = parseInt(val.substr(i * 2, 2), 16);
+				}
+				return result;
+			}
+			//_STH(val) {return val.split("").reduce((hex,c)=>hex+=c.charCodeAt(0).toString(16).padStart(2,"0"),"");}
+			_STH(val) {
+				let hex = '';
+				for (const c of val) {
+				hex += c.charCodeAt(0).toString(16).padStart(2, "0");
+				}
+				return hex;
+			}
+			_CTI(array) {return array[0] * (256*256) + array[1] * 256 + array[2];}
+			_CTH(array) {return ((1 << 24) + (array[0] << 16) + (array[1] << 8) + array[2]).toString(16).slice(1);}
+			_CTSH(array) {return "0x" + this._CTH([Math.round(array[0]/17), Math.round(array[1]/17), Math.round(array[2]/17)]).slice(1).replace(/(.{1})./g, "$1").toUpperCase();}
+			getTypeofVar(val) {return ((typeof val) == "number") ? (val == 0 || val%1 == 0) ? "integer" : "float" : "string";}
+			}
+			`;
+
+			// create blob for main JSOCTA script
+			const _jsocta_main_blob = new Blob([_jsocta_main_string], { type: 'application/javascript' });
+			const _jsocta_main_url = URL.createObjectURL(_jsocta_main_blob);
+
+			const _jsocta_worker_string = `
+			importScripts('https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', '${_jsocta_main_url}');
+
+			function getJSOCTAVersion(object) {
+			switch(object.version || 2) {
+				case 1: return OctaMap;
+				case 2: return QuickOGZ;
+			};
+			}
+
+			function isAlreadyObject(content) {
+				return typeof content === 'object' && content !== null && !Array.isArray(content);
+			}
+
+			const _jsocta_current_file = {};
+			self.onmessage = async (event) => {
+			let message = event.data;
+			let skipInitialization = false;
+
+			switch(message.type) {
+				case 1:
+					if (_jsocta_current_file.JSOCTA.mapsize >= 65536) {
+						postMessage({'type': -1, 'body': {'error': "Out-of-bounds cubes are beyond predefined limit (65536 units).", _jsocta_current_file}});
+						return;
+					}
+					// prevents RangeError when trying to add cubes outside the map boundaries
+					_jsocta_current_file.JSOCTA.mapsize *= 2;
+					skipInitialization = true;
+				case 0:
+					try {
+						if (!skipInitialization) {
+							postMessage({'type': 0, 'body': 'Reading JSON data..'});
+							if (!isAlreadyObject(message.body.content)) {
+								_jsocta_current_file.JSON = JSON.parse(message.body.content.replace(/,\s*([\]}])/g, '$1'));
+							} else {
+								_jsocta_current_file.JSON = message.body.content;
+							}
+
+							let JSOCTA = getJSOCTAVersion(_jsocta_current_file.JSON);
+
+							postMessage({'type': 0, 'body': 'Writing OGZ data..'});
+							_jsocta_current_file.JSOCTA = new JSOCTA(_jsocta_current_file.JSON.map || _jsocta_current_file.JSON);
+						}
+						//console.time("WrittingOGZ");
+						let OCT = _jsocta_current_file.JSOCTA.getByteArray();
+						//console.timeEnd("WrittingOGZ");
+						postMessage({'type': 0, 'body': 'Compressing OGZ data..'});
+						_jsocta_current_file.GZIP = pako.gzip(OCT);
+						
+						postMessage({'type': 1, 'body': {'_jsocta_current_file': _jsocta_current_file}});
+					} catch (error) {
+						postMessage({'type': -1, 'body': {error, _jsocta_current_file}});
+					}
+					break;
+			}
+			};
+			`;
+
+			// create blob for JSOCTA worker script
+			const _jsocta_worker_string_blob = new Blob([_jsocta_worker_string], { type: 'application/javascript' });
+			const _jsocta_worker_string_url = URL.createObjectURL(_jsocta_worker_string_blob);
+			const _jsocta_worker = new Worker(_jsocta_worker_string_url);
+
+			class fileStatus {
+				constructor () {}
+				update(state, message) {
+					console.log(state, message);
+				}
+			}
+			const FS_fileStatus = new fileStatus(); // lazy implementation
+
+			let _jsocta_current_file = {};
+			const _jsocta_gzip_history = [];
+
+			_jsocta_worker.onmessage = function(event) {
+				const message = event.data;
+				_jsocta_current_file = message.body._jsocta_current_file;
+				switch(message.type) {
+					case -1:
+						if (message.body.error.toString().includes('RangeError')) {
+							FS_fileStatus.update(1, `Trying to adjust mapsize to contain out-of-bounds cubes.. ${message.body._jsocta_current_file.JSOCTA.mapsize}`, 'fas fa-spinner fa-spin');
+							_jsocta_worker.postMessage({'type': 1});
+							_jsocta_worker.log(`Trying to fix out-of-bounds cubes with mapsize ${message.body._jsocta_current_file.JSOCTA.mapsize*2}..`)
+						} else {
+							console.error('Could not parse JSON correctly.', message.body);
+							FS_fileStatus.update(0, `Something went wrong.`, 'fas fa-times');
+							_jsocta_worker.error(message.body);
+						}
+						break;
+					case 0:
+						FS_fileStatus.update(1, `${message.body}`, 'fas fa-spinner fa-spin');
+						_jsocta_worker.log(message.body)
+						break;
+					case 1:
+						_jsocta_current_file = message.body._jsocta_current_file;
+						FS_fileStatus.update(0, `Done, OGZ file is ready.`, 'fas fa-check-circle');
+						_jsocta_gzip_history.push(_jsocta_current_file.GZIP);
+
+						if ('callback' in _jsocta_worker) {
+							_jsocta_worker.callback(_jsocta_current_file);
+							_jsocta_worker.callback = () => {};
+						}
+						break;
+				}
+			};
+
+			function _jsocta_jsonToOGZ(string, log, done, error) {
+				_jsocta_worker.postMessage({'type': 0, 'body': {'content': string}});
+				_jsocta_worker.log = log ? log : ()=>{};
+				_jsocta_worker.callback = done ? done : ()=>{};
+				_jsocta_worker.error = error ? error : (error)=>{alert(error)};
+			}
+
+			function _josias_openWithLoopfiles(path, e) {
+				saueracle_explorer.openFolder(path);
+				_loopfiles_open(e, _icon_folder);
+			}
+
+			function _josias_download_ogz(id) {
+				const blob = new Blob([_jsocta_gzip_history[id]], { type: 'application/gzip' });
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement('a');
+				link.href = url;
+
+				const date = new Date();
+				const dateString = date.toISOString().split('T')[0];
+				link.download = `saueracle_map_${dateString}.ogz`;
+
+				link.click();
+				URL.revokeObjectURL(url);
+			}
+
+			function _download_file(name, content, type = 'application/gzip') {
+				const blob = new Blob([content], { type: type });
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement('a');
+				link.href = url;
+
+				link.download = `${name}`;
+
+				link.click();
+				URL.revokeObjectURL(url);
+			}
+
+			function _addText(text, startX, startY, startZ, textureIndex = 2, gridPower = 0, rotate = 0) {
+				const charWidth = 5; // assuming each character is 5 cubes wide
+				const charHeight = 7; // assuming each character is 7 cubes tall
+				const spacing = 1; // space between characters
+				const verticalSpacing = 2; // vertical space between lines
+				const tabSize = 2; // equivalent to 4 characters wide
+				const cubeSize = Math.pow(2, gridPower);
+				const initialX = startX; // to reset startX on newline
+				const map = [];
+				let mirror = false;
+
+				for (let i = 0; i < text.length; i++) {
+					let c = mirror ? ((text.length-1) - i) : i; // tofix: last letter gets lost
+					const character = text[c];
+
+					if (character === ' ') {
+						startX += (charWidth + spacing) * cubeSize; // move start position for space
+						continue;
+					} else if (character === '\n') {
+						startX = initialX; // reset to beginning of line
+						startZ -= (charHeight + verticalSpacing) * cubeSize; // move down a line
+						continue;
+					} else if (character === '\t') {
+						startX += (charWidth * tabSize + spacing) * cubeSize; // move start position for tab
+						continue;
+					}
+
+					const matrix = _jsocta_text_get_matrix(character);
+					for (let y = 0; y < matrix.length; y++) {
+						for (let x = 0; x < matrix[y].length; x++) {
+							let matrix_block = mirror ? matrix[y][matrix[y].length - 1 - x] : matrix[y][x];
+							if (matrix_block === 1) {
+								let cube = {
+									x: startX + x * cubeSize,
+									y: startY,
+									z: startZ + (charHeight - y) * cubeSize,
+									g: gridPower,
+									af: textureIndex
+								}
+								switch(rotate) {
+									case 1: case 3:
+										let temp = cube.x;
+										cube.x = cube.y;
+										cube.y = temp;
+										if (rotate == 3) {
+											mirror = true;
+										}
+										break;
+									case 2:
+										mirror = true;
+										break;
+									default: 
+										break;
+								}
+								map.push(cube);
+							}
+						}
+					}
+					startX += (charWidth + spacing) * cubeSize; // move start position to next character
+
+				}
+
+				return map;
+			}
+
+			function _jsocta_text_get_matrix(char) {
+				return _jsocta_char_matrices[char.toUpperCase()] || _jsocta_char_matrices[' '];
+			}
+
+			const _jsocta_char_matrices={
+				" ":[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],A:[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],B:[[1,1,1,0,0],[1,0,0,1,0],[1,1,1,0,0],[1,0,0,1,0],[1,0,0,1,0],[1,0,0,1,0],[1,1,1,0,0]],C:[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,1],[0,1,1,1,0]],D:[[1,1,1,0,0],[1,0,0,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,1,0],[1,1,1,0,0]],E:[[1,1,1,1,1],[1,0,0,0,0],[1,1,1,0,0],[1,1,1,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],F:[[1,1,1,1,1],[1,0,0,0,0],[1,1,1,0,0],[1,1,1,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],G:[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[1,0,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],H:[[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],I:[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],J:[[0,0,0,1,1],[0,0,0,1,1],[0,0,0,1,1],[0,0,0,1,1],[1,0,0,1,1],[1,0,0,1,1],[0,1,1,0,0]],K:[[1,0,0,0,1],[1,0,0,1,0],[1,0,1,0,0],[1,1,0,0,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],L:[[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],M:[[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],N:[[1,0,0,0,1],[1,1,0,0,1],[1,0,1,0,1],[1,0,0,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],O:[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],P:[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],Q:[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,1,1],[1,0,1,0,1],[1,1,0,1,0],[0,1,1,1,1]],R:[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],S:[[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[0,0,0,0,1],[1,1,1,1,0]],T:[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],U:[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],V:[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0]],W:[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,1,0,1],[1,1,0,1,1],[1,0,0,0,1],[1,0,0,0,1]],X:[[1,0,0,0,1],[0,1,0,1,0],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[0,1,0,1,0],[1,0,0,0,1]],Y:[[1,0,0,0,1],[0,1,0,1,0],[0,1,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],Z:[[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],0:[[0,1,1,1,0],[1,0,0,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,0,0,1],[0,1,1,1,0]],1:[[0,0,1,0,0],[0,1,1,0,0],[1,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],2:[[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,1,1,1,1]],3:[[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],4:[[0,0,0,1,0],[0,0,1,1,0],[0,1,0,1,0],[1,0,0,1,0],[1,1,1,1,1],[0,0,0,1,0],[0,0,0,1,0]],5:[[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],6:[[0,0,1,1,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],7:[[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],8:[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],9:[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[1,1,1,0,0]],"/": [[0,0,0,0,1],[0,0,0,1,0],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[0,1,0,0,0],[1,0,0,0,0]],"[": [[0,1,1,1,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,1,1,0]],"]": [[0,1,1,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,1,1,1,0]],")": [[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0]],"(": [[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0]],"}": [[1,1,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,0,0,0]],"{": [[0,0,0,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,1,1]],"=": [[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0]],">": [[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0]],"<": [[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0]],",": [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0]],":": [[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0]],"\"": [[0,1,0,1,0],[0,1,0,1,0],[0,1,0,1,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],";": [[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,1,0,0],[0,1,0,0,0]],"*": [[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],".": [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0]],"$": [[0,0,0,1,0],[1,1,1,1,1],[1,0,1,0,0],[1,1,1,1,1],[0,0,1,0,1],[1,1,1,1,1],[0,1,0,0,0]],"_": [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1]],"\`": [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],"@": [[0,1,1,1,0],[1,0,0,0,1],[1,0,1,1,1],[1,0,1,1,0],[1,0,0,0,0],[1,1,0,0,1],[0,1,1,1,0]],"+": [[0,0,0,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0]],
+			};
+
+		</script>
+	</body>
+</html>
