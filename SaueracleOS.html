@@ -148,9 +148,9 @@
 			}
 
 			.desktop_app img {
-			    width: 48px;
-			    height: 48px;
-			    margin-bottom: 5px;
+				width: 48px;
+				height: 48px;
+				margin-bottom: 5px;
 			}
 
 			.desktop_app_title {
@@ -606,35 +606,35 @@
 
 			class DesktopApps {
 				constructor(parent) {
-				    this.parent = (typeof parent == 'string') ? this._qelement(parent) : parent;
-				    this.toolbar = this._qelement('#open_apps') || undefined;
-				    this.icons = [];
-				    this.windows = [];
+					this.parent = (typeof parent == 'string') ? this._qelement(parent) : parent;
+					this.toolbar = this._qelement('#open_apps') || undefined;
+					this.icons = [];
+					this.windows = [];
 					this.toolbar_icons = [];
 				}
 
-			    _qelement(selector) {
-			        return document.querySelector(selector);
-			    }
+				_qelement(selector) {
+					return document.querySelector(selector);
+				}
 
-			    _nelement(tag) {
-			        return document.createElement(tag);
-			    }
+				_nelement(tag) {
+					return document.createElement(tag);
+				}
 
 				addWindow(title = 'Default App', body, iconImage = '', width = 128, height = 64, pos_x = 0, pos_y = 0, force = false) {
-				    let existingWindow = this.windows.find(w => w.title === title && (!w.open || force));
-				    if (existingWindow) {
-				        this.toggleWindowDisplay(this.windows.indexOf(existingWindow));
-				        existingWindow.body.focus();
-				        this.updateToolbar();
-				        return;
-				    }
+					let existingWindow = this.windows.find(w => w.title === title && (!w.open || force));
+					if (existingWindow) {
+						this.toggleWindowDisplay(this.windows.indexOf(existingWindow));
+						existingWindow.body.focus();
+						this.updateToolbar();
+						return;
+					}
 
-			        let div_window = this._nelement('div');
-			        div_window.className = 'app_window';
-			        div_window.style.position = 'absolute';
-			        div_window.style.width = `${width}px`;
-			        div_window.style.height = `${height}px`;
+					let div_window = this._nelement('div');
+					div_window.className = 'app_window';
+					div_window.style.position = 'absolute';
+					div_window.style.width = `${width}px`;
+					div_window.style.height = `${height}px`;
 
 					// calculate initial position with boundary checks
 					let [adjustedX, adjustedY] = this.adjustPosition(pos_x - (width / 2), pos_y - 16, width, height);
@@ -645,12 +645,12 @@
 
 					div_window.setAttribute('force', force);
 
-			        /*div_window.addEventListener('mouseenter', () => {
-			        	div_window.style.opacity = 1
-			        })
-			        div_window.addEventListener('mouseleave', () => {
-			        	div_window.style.opacity = 0.95
-			        })*/
+					/*div_window.addEventListener('mouseenter', () => {
+						div_window.style.opacity = 1
+					})
+					div_window.addEventListener('mouseleave', () => {
+						div_window.style.opacity = 0.95
+					})*/
 
 					div_window.addEventListener('click', (e) => {
 						//console.log(appwindow)
@@ -665,23 +665,23 @@
 						let dump_refresh = div_window.scrollHeight;
 					})
 
-			        let div_window_header = this._nelement('div');
-			        div_window_header.className = 'app_window_header';
+					let div_window_header = this._nelement('div');
+					div_window_header.className = 'app_window_header';
 
-			        let image_window_icon = this._nelement('img');
-			        image_window_icon.src = iconImage;
-			        image_window_icon.className = 'app_window_icon'
+					let image_window_icon = this._nelement('img');
+					image_window_icon.src = iconImage;
+					image_window_icon.className = 'app_window_icon'
 
-			        let span_window_title = this._nelement('span');
-			        span_window_title.className = 'app_window_title';
-			        span_window_title.innerHTML = title;
+					let span_window_title = this._nelement('span');
+					span_window_title.className = 'app_window_title';
+					span_window_title.innerHTML = title;
 
-			        let div_window_header_buttons = this._nelement('div');
-			        div_window_header_buttons.className = 'app_window_header_buttons';
+					let div_window_header_buttons = this._nelement('div');
+					div_window_header_buttons.className = 'app_window_header_buttons';
 
-			        let button_refresh = this._nelement('button');
-			        button_refresh.className = 'button_refresh';
-			        button_refresh.addEventListener('click', () => {
+					let button_refresh = this._nelement('button');
+					button_refresh.className = 'button_refresh';
+					button_refresh.addEventListener('click', () => {
 						let index_to_remove = this.windows.findIndex(w => w.body === div_window);
 						console.log('refresh', appwindow.onrefresh, this.lastIconClick, index_to_remove);
 						if (appwindow.onrefresh != false) {
@@ -696,151 +696,151 @@
 						}
 					});
 					
-			        let image_refresh_button = this._nelement('img');
-			        image_refresh_button.src = _icon_refresh;
-			        button_refresh.appendChild(image_refresh_button);
+					let image_refresh_button = this._nelement('img');
+					image_refresh_button.src = _icon_refresh;
+					button_refresh.appendChild(image_refresh_button);
 
-			        let button_min = this._nelement('button');
-			        button_min.className = 'button_minimize';
-			        button_min.addEventListener('click', () => this.toggleWindowDisplay(this.windows.indexOf(appwindow)));
+					let button_min = this._nelement('button');
+					button_min.className = 'button_minimize';
+					button_min.addEventListener('click', () => this.toggleWindowDisplay(this.windows.indexOf(appwindow)));
 
-			        let image_min_button = this._nelement('img');
-			        image_min_button.src = _icon_minimize;
-			        button_min.appendChild(image_min_button);
+					let image_min_button = this._nelement('img');
+					image_min_button.src = _icon_minimize;
+					button_min.appendChild(image_min_button);
 
-			        let button_close = this._nelement('button');
-			        button_close.className = 'button_close';
+					let button_close = this._nelement('button');
+					button_close.className = 'button_close';
 					button_close.addEventListener('click', () => {
-					    const index = this.windows.findIndex(w => w.body === div_window);
-					    div_window.classList.add('app_window_close');
-					    setTimeout(() => {
-					    	this.removeWindows(index);
-					    }, 200)
+						const index = this.windows.findIndex(w => w.body === div_window);
+						div_window.classList.add('app_window_close');
+						setTimeout(() => {
+							this.removeWindows(index);
+						}, 200)
 					    
 					});
 
-			        let image_close_button = this._nelement('img');
-			        image_close_button.src = _icon_close;
-			        button_close.appendChild(image_close_button);
+					let image_close_button = this._nelement('img');
+					image_close_button.src = _icon_close;
+					button_close.appendChild(image_close_button);
 
-			        let div_window_content = this._nelement('div');
-			        div_window_content.className = 'app_window_content';
+					let div_window_content = this._nelement('div');
+					div_window_content.className = 'app_window_content';
 
 					let div_window_loading = this._nelement('div');
 					div_window_loading.className = 'app_window_loading';
 					div_window_content.appendChild(div_window_loading);
 
-			        div_window_content.appendChild(body);
+					div_window_content.appendChild(body);
 
-			        div_window_header.appendChild(image_window_icon);
-			        div_window_header.appendChild(span_window_title);
+					div_window_header.appendChild(image_window_icon);
+					div_window_header.appendChild(span_window_title);
 					div_window_header_buttons.appendChild(button_refresh);
-			        div_window_header_buttons.appendChild(button_min);
-			        div_window_header_buttons.appendChild(button_close);
-			        if (!force) {
+					div_window_header_buttons.appendChild(button_min);
+					div_window_header_buttons.appendChild(button_close);
+					if (!force) {
 						div_window_header.appendChild(div_window_header_buttons);
 					}
-			        div_window.appendChild(div_window_header);
-			        div_window.appendChild(div_window_content);
+					div_window.appendChild(div_window_header);
+					div_window.appendChild(div_window_content);
 
 					let appwindow = {
-					    title,
-					    open: true,
-					    body: div_window,
-					    iconImage,
+						title,
+						open: true,
+						body: div_window,
+						iconImage,
 						subIcon: false,
 						loading: (state = false) => {div_window_loading.style.display = state ? 'block' : 'none'},
 						onrefresh: false,
 					};
 
-			        this.windows.push(appwindow);
-			        div_window.focus();
-			        this.drawWindows(this.windows.length - 1);
-			        this.updateToolbar();
+					this.windows.push(appwindow);
+					div_window.focus();
+					this.drawWindows(this.windows.length - 1);
+					this.updateToolbar();
 					return appwindow;
-			    }
+				}
 
-			    removeWindows(index = -1) {
-			        if (index === -1) {
-			            this.windows.forEach(win => win.body.remove());
-			            this.windows = [];
-			        } else {
-			            this.windows[index].body.remove();
-			            this.windows.splice(index, 1);
-			        }
-			        this.updateToolbar();
-			    }
+				removeWindows(index = -1) {
+					if (index === -1) {
+						this.windows.forEach(win => win.body.remove());
+						this.windows = [];
+					} else {
+						this.windows[index].body.remove();
+						this.windows.splice(index, 1);
+					}
+					this.updateToolbar();
+				}
 
-			    drawWindows(index = -1) {
-			        if (index === -1) {
-			            this.windows.forEach(win => {
-			                if (win.open) {
-			                    this.parent.appendChild(win.body);
+				drawWindows(index = -1) {
+					if (index === -1) {
+						this.windows.forEach(win => {
+							if (win.open) {
+								this.parent.appendChild(win.body);
 								console.log("loading", win.title, win.loading)
 								if (win.loading) {
 									win.body.querySelectorAll('.app_window_loading')[0].style.display = 'block';
 								} else {
 									win.body.querySelectorAll('.app_window_loading')[0].style.display = 'none';
 								}
-			                }
-			            });
-			        } else if (this.windows[index]) {
-			            this.parent.appendChild(this.windows[index].body);
-			        }
-			    }
+							}
+						});
+					} else if (this.windows[index]) {
+						this.parent.appendChild(this.windows[index].body);
+					}
+				}
 
 
-			    toggleWindowDisplay(index) {
-			        if (this.windows[index]) {
-			            const currentDisplay = this.windows[index].body.style.display;
-			            this.windows[index].open = currentDisplay === 'none';
-		            	if (!this.windows[index].open) {
-		            		this.windows[index].body.classList.add('app_window_minimize')
-		            	}
+				toggleWindowDisplay(index) {
+					if (this.windows[index]) {
+						const currentDisplay = this.windows[index].body.style.display;
+						this.windows[index].open = currentDisplay === 'none';
+						if (!this.windows[index].open) {
+							this.windows[index].body.classList.add('app_window_minimize')
+						}
 
-			            setTimeout(() => {
-			            	this.windows[index].body.style.display = currentDisplay === 'none' ? 'block' : 'none';
-			            	this.windows[index].body.className = 'app_window';
-			            }, !this.windows[index].open ? 500 : 0)
+						setTimeout(() => {
+							this.windows[index].body.style.display = currentDisplay === 'none' ? 'block' : 'none';
+							this.windows[index].body.className = 'app_window';
+						}, !this.windows[index].open ? 500 : 0)
 
-			        }
-			       
+					}
+					
 
-			    }
+				}
 
-			    drawIcons(list = this.icons) {
-			        this.parent.innerHTML = '';
-			        this.parent.appendChild(this.getIcons(list));
-			    }
+				drawIcons(list = this.icons) {
+					this.parent.innerHTML = '';
+					this.parent.appendChild(this.getIcons(list));
+				}
 
-			    getIcons(list = this.icons) {
-			        const icons = this._nelement('div');
-			        icons.className = 'desktop_apps';
+				getIcons(list = this.icons) {
+					const icons = this._nelement('div');
+					icons.className = 'desktop_apps';
 
-			        list.forEach(icon => {
-			            let div_icon = this._nelement('div');
-			            div_icon.className = 'desktop_app';
-			            div_icon.addEventListener('click', (event) => icon.onclick(event));
+					list.forEach(icon => {
+						let div_icon = this._nelement('div');
+						div_icon.className = 'desktop_app';
+						div_icon.addEventListener('click', (event) => icon.onclick(event));
 
-			            let img_icon = this._nelement('img');
-			            img_icon.src = icon.image;
+						let img_icon = this._nelement('img');
+						img_icon.src = icon.image;
 
-			            let div_title = this._nelement('div');
-			            div_title.className = 'desktop_app_title';
-			            div_title.textContent = icon.title;
+						let div_title = this._nelement('div');
+						div_title.className = 'desktop_app_title';
+						div_title.textContent = icon.title;
 
-			            div_icon.appendChild(img_icon);
-			            div_icon.appendChild(div_title);
+						div_icon.appendChild(img_icon);
+						div_icon.appendChild(div_title);
 
-			            icons.appendChild(div_icon);
-			        });
+						icons.appendChild(div_icon);
+					});
 
-			        return icons;
-			    }
+					return icons;
+				}
 
 				addIcon(title = 'Default App', image = '', onclick = () => {}) {
-				    // store the icon data with an onclick that includes the icon image URL
-				    this.icons.push({ title, image, onclick: (e) => {
+					// store the icon data with an onclick that includes the icon image URL
+					this.icons.push({ title, image, onclick: (e) => {
 						onclick(event, image);
 						this.lastIconClick = () => onclick(event, image);
 					}});
@@ -849,10 +849,10 @@
 				updateToolbar() {
 					if (!this.toolbar) return;
 					this.toolbar_icons = [];
-				    this.toolbar.innerHTML = '';
-				    this.windows.forEach((win, index) => {
-				        //if (win.open) {
-				        	let button_toolbar_icon = this._nelement('button');
+					this.toolbar.innerHTML = '';
+					this.windows.forEach((win, index) => {
+						//if (win.open) {
+							let button_toolbar_icon = this._nelement('button');
 							button_toolbar_icon.addEventListener('click', () => {
 								if (!win.open && win.body.style.display == 'block') {win.body.style.display = 'none'}
 								this.toggleWindowDisplay(index);
@@ -865,7 +865,7 @@
 									button_toolbar_icon.classList.add('toolbar_icon_selected')
 								}
 							});
-				            button_toolbar_icon.className = 'toolbar_icon';
+							button_toolbar_icon.className = 'toolbar_icon';
 
 							// handle mouse enter to add outline
 							button_toolbar_icon.addEventListener('mouseenter', () => {
@@ -879,11 +879,11 @@
 								if (!win.open) {win.body.style.display = 'none'}
 							});
 
-				            let icon = this._nelement('img');
-				            icon.src = win.iconImage;  // use the icon image from the window object
-				            icon.title = win.title;  // tooltip showing the window title
+							let icon = this._nelement('img');
+							icon.src = win.iconImage;  // use the icon image from the window object
+							icon.title = win.title;  // tooltip showing the window title
 						
-				            button_toolbar_icon.appendChild(icon);
+							button_toolbar_icon.appendChild(icon);
 
 							if (win.subIcon) { // extra smaller icon that shows over the main icon.
 								let subicon = this._nelement('span');
@@ -892,10 +892,10 @@
 								button_toolbar_icon.appendChild(subicon);
 							}
 
-				            this.toolbar.appendChild(button_toolbar_icon);
+							this.toolbar.appendChild(button_toolbar_icon);
 							this.toolbar_icons.push(button_toolbar_icon);
-				        //}
-				    });
+						//}
+					});
 				}
 
 				adjustPosition(x, y, width, height) {
@@ -1364,8 +1364,8 @@
 			// System Info
 			desktop.addIcon('Computer Info', _icon_info, (e, iconImage) => {
 				let api = new APIFetchContextual(_api_endpoint_htmlgenerator)
-			    let div = desktop._nelement('div');
-			    let computer_info = desktop.addWindow(`Computer Info - ${_app_name} v${_app_version}`, div, iconImage, 733, 574, 550, 120);
+				let div = desktop._nelement('div');
+				let computer_info = desktop.addWindow(`Computer Info - ${_app_name} v${_app_version}`, div, iconImage, 733, 574, 550, 120);
 				let default_html_generator_prompt = `Generate a detailed report about the current 'computer hardware' and 'software', including CPU, RAM, GPU, operating system, and installed programs. Format the response in HTML (add inline css to the elements, prefer dark-mode style), no Markdown. Include emojis. The operating system is ${_app_name}, make subtle references to ${_app_subject_name}, do not include explanations in parentheses. Include info about current page windows/apps too. Include parody benchmark stats of all kinds.`
 				
 				computer_info.loading(true);
@@ -2137,8 +2137,8 @@
 
 				chat.textarea_chat.addEventListener('keydown', (e) => {
 					if (e.key === 'Enter' && !e.shiftKey) {
-					    e.preventDefault(); // Prevent the default action to avoid a new line
-					    sendInput();
+						e.preventDefault(); // Prevent the default action to avoid a new line
+						sendInput();
 					}
 				});
 
