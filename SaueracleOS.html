@@ -1,10 +1,11 @@
 <!--SaueracleOS by @SalatielSauer - Content Generation Toolset for Sauerbraten-->
-<!--This is an incomplete remake of SaueracleOS (23/08/2024)-->
+<!--This is an incomplete remake of SaueracleOS (18/07/2025)-->
 <!DOCTYPE html>
 <html>
 	<head>
 		<!--<base href='SaueracleOS/v1.0'>-->
 		<title>SaueracleOS</title>
+        <link rel="icon" type="image/x-icon" href="saueracle.ico">
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/speed-highlight/core/dist/themes/dark.css">
@@ -1005,42 +1006,255 @@
 
 			}
 
-			class APIFetch {
-				constructor(url) {
-					this.url = url;
-					this.onfirstresponse = () => {}
-					this.onlastresponse = () => {}
-					this.onerror = (e) => {
-						console.error('Failed at APIFetch', url, e)
+			class ChatFlow {
+				constructor() {
+					this.batches = new Map();
+					this.readyQueue = [];
+					this.sending = false;
+					this.typingUsers = new Set();
+					this.sentMessages = [];
+					this.allPending = [];
+					this.ontypingListeners = [];
+
+					this.onSilenceListeners = [];
+					this.silenceTimer = null;
+					this.silenceTimeoutSec = 50;
+				}
+
+				addToQueue({ name, message, onSend }) {
+					const nowSec = Math.floor(Date.now() / 1000);
+
+					const msgObj = { name, message, onSend, _pending: true };
+					this.allPending.push(msgObj);
+
+					this._resetSilenceTimer();
+
+					if (!this.batches.has(nowSec)) {
+						this.batches.set(nowSec, []);
+						setTimeout(() => {
+							this.processBatch(nowSec);
+						}, 0);
 					}
-					this.get = () => {
-						fetch(this.url).then(fr => this.onfirstresponse(fr))
-									.then(lr => this.onlastresponse(lr))
-									.catch(err => this.onerror(err))
+					this.batches.get(nowSec).push(msgObj);
+				}
+
+				async processBatch(batchSec) {
+					const batch = this.batches.get(batchSec);
+					if (!batch) return;
+
+					for (let i = 0; i < batch.length;) {
+						const msgObj = batch[i];
+						// If instaSend already sent it, skip
+						if (!msgObj._pending) {
+							batch.splice(i, 1);
+							continue;
+						}
+						await this.simulateTyping(msgObj);
+						if (msgObj._pending) {
+							this.readyQueue.push(msgObj);
+							this.startSender();
+						}
+						if (batch[i] === msgObj) i++;
+						if (i < batch.length) {
+							const randomGap = 2000 + Math.random() * 5000;
+							await this.delay(randomGap);
+						}
+					}
+					this.batches.delete(batchSec);
+				}
+
+				async simulateTyping(msgObj) {
+					if (!msgObj._pending) return; // instaSend might have sent it
+
+					this.typingUsers.add(msgObj.name);
+					this.emitTyping();
+					const chars = msgObj.message.length;
+					const msPerChar = 100 + Math.random() * 60;
+					const totalDelay = Math.floor(chars * msPerChar);
+
+					await this.delay(totalDelay);
+					this.typingUsers.delete(msgObj.name);
+					this.emitTyping();
+				}
+
+				async startSender() {
+					if (this.sending) return;
+					this.sending = true;
+
+					while (this.readyQueue.length > 0) {
+						const msgObj = this.readyQueue.shift();
+						// InstaSend might have sent it already
+						if (!msgObj._pending) continue;
+						this.actuallySend(msgObj);
+						const globalGap = 5000 + Math.random() * 5000;
+						await this.delay(globalGap);
+					}
+					this.sending = false;
+				}
+
+				actuallySend(msgObj) {
+					if (!msgObj._pending) return;
+					msgObj._pending = false;
+
+					this.sentMessages.push({
+						name: msgObj.name,
+						message: msgObj.message,
+						sentAt: new Date()
+					});
+					this.typingUsers.delete(msgObj.name);
+					this.emitTyping();
+
+					this._resetSilenceTimer();
+
+					if (typeof msgObj.onSend === "function") {
+						msgObj.onSend(msgObj);
 					}
 				}
 
-				post(message) {
-					fetch(this.url, {
-						method: 'POST', headers: {'Content-Type': 'application/json', 'Websim-Update': 'true'},
-						body: JSON.stringify({message: message})
-					}).then(fr => this.onfirstresponse(fr))
-					  .then(lr => this.onlastresponse(lr))
-					  .catch(err => this.onerror(err))
+				delay(ms) {
+					return new Promise(res => setTimeout(res, ms));
+				}
+
+				get typingStatus() {
+					const users = Array.from(this.typingUsers);
+					if (users.length === 0) {
+						return "";
+					} else if (users.length === 1) {
+						return `${users[0]} is typing..`;
+					} else if (users.length === 2) {
+						return `${users[0]} and ${users[1]} are typing..`;
+					} else {
+						return `${users[0]}, ${users[1]} and others are typing..`;
+					}
+				}
+
+				// Instantly send the first `count` unsent messages, skipping all delays and typing
+				instaSend(count) {
+					let sent = 0;
+					for (let msgObj of this.allPending) {
+						if (msgObj._pending && sent < count) {
+							this.actuallySend(msgObj);
+							sent++;
+						}
+						if (sent >= count) break;
+					}
+				}
+
+				// Register a callback for ontyping events
+				ontyping(callback) {
+					if (typeof callback === "function") {
+						this.ontypingListeners.push(callback);
+					}
+				}
+
+				// Internal: Call all listeners when typingUsers changes
+				emitTyping() {
+					const status = this.typingStatus;
+					for (const cb of this.ontypingListeners) {
+						cb(status, Array.from(this.typingUsers));
+					}
+				}
+
+				setSilenceTimeout(sec) {
+					this.silenceTimeoutSec = sec;
+				}
+
+				_resetSilenceTimer() {
+					if (this.silenceTimer) clearTimeout(this.silenceTimer);
+					this.silenceTimer = setTimeout(() => {
+						this.emitSilence();
+					}, this.silenceTimeoutSec * 1000);
+				}
+			
+				onsilence(callback) {
+					if (typeof callback === "function") {
+						this.onSilenceListeners.push(callback);
+					}
+				}
+			
+				emitSilence() {
+					for (const cb of this.onSilenceListeners) {
+						cb();
+					}
+				}
+
+				getContext({ pastCount = 3, futureCount = 3, anchorIndex } = {}) {
+					const sent = this.sentMessages;
+					const pending = this.allPending.filter(msg => msg._pending);
+
+					// By default, anchor on latest sent message
+					const anchorIdx = anchorIndex !== undefined ? anchorIndex : sent.length - 1;
+					const past = sent.slice(Math.max(0, anchorIdx - pastCount), anchorIdx);
+					const anchor = sent[anchorIdx] || null;
+					const future = pending.slice(0, futureCount);
+
+					return {
+						past,      // Array of past sent message objects
+						anchor,    // The anchor message (sent)
+						future     // Array of upcoming (pending) message objects
+					};
 				}
 			}
+
+
+			const chat_flow = new ChatFlow();
+
+			class APIFetch {
+				constructor(url) {
+					this.url = url;
+					this.onfirstresponse = () => {};
+					this.onlastresponse = () => {};
+					this.onerror = (e) => {
+						console.error('Failed at APIFetch', url, e);
+					};
+					this.get = () => {
+						fetch(this.url)
+							.then(fr => this.onfirstresponse(fr))
+							.then(lr => this.onlastresponse(lr))
+							.catch(err => this.onerror(err));
+					};
+				}
+
+				async post(message) {
+					const payload = {
+						messages: [
+							{ role: "system", content: message },
+							{ role: "user", content: "Please follow exactly the instructions." }
+						],
+						json: true
+					};
+
+					try {
+						const completion = await websim.chat.completions.create(payload);
+						// Use .content if it's what you want; adjust as needed
+						let firstResult = (typeof this.onfirstresponse === "function")
+							? this.onfirstresponse(completion)
+							: completion;
+
+						if (firstResult instanceof Promise) firstResult = await firstResult;
+
+						if (typeof this.onlastresponse === "function") {
+							this.onlastresponse(firstResult);
+						}
+					} catch (err) {
+						this.onerror(err);
+					}
+				}
+			}
+
 
 			class APIFetchContextual {
 				constructor(url) {
 					this.url = url;
 					this.onerror = (e) => {
 						console.error('Failed at APIFetch', this.url, e);
-					}
+					};
 				}
 
 				// Default handler for the first response
 				handleFirstResponse(response) {
-					return response.json(); // Assuming the first response should be converted to JSON
+					// For websim, this will just be the response object
+					return response; 
 				}
 
 				// Default handler for the last response
@@ -1057,34 +1271,50 @@
 					console.error('Error in APIFetch:', error);
 				}
 
-				// General fetch function that accepts optional handlers
-				fetchWithOptions(options, onFirstResponse, onLastResponse, onError) {
-					fetch(this.url, options).then(response => {
-						return onFirstResponse ? onFirstResponse(response) : this.handleFirstResponse(response);
-					}).then(result => {
-						if (onLastResponse) {
-							onLastResponse(result);
-						}
-					}).catch(err => {
+				// General function to use with the new websim API
+				async fetchWithOptions(payload, onFirstResponse, onLastResponse, onError) {
+					try {
+						const completion = await websim.chat.completions.create(payload);
+						let firstResult = onFirstResponse ? onFirstResponse(completion) : this.handleFirstResponse(completion);
+
+						if (firstResult instanceof Promise) firstResult = await firstResult;
+						if (onLastResponse) onLastResponse(firstResult);
+					} catch (err) {
 						(onError || this.handleError)(err);
-					});
+					}
 				}
 
-				get(onFirstResponse, onLastResponse, onError) {
-					this.fetchWithOptions({}, onFirstResponse, onLastResponse, onError);
+				async get(onFirstResponse, onLastResponse, onError) {
+					try {
+						const response = await fetch(this.url, {
+							method: 'GET',
+							headers: {
+								'Accept': 'application/json'
+							}
+						});
+
+						if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+						const data = await response.json();
+
+						let firstResult = onFirstResponse ? onFirstResponse(data) : this.handleFirstResponse(data);
+
+						if (firstResult instanceof Promise) firstResult = await firstResult;
+						if (onLastResponse) onLastResponse(firstResult);
+					} catch (err) {
+						(onError || this.handleError)(err);
+					}
 				}
 
-				post(message, onFirstResponse, onLastResponse, onError) {
-					const options = {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'Websim-Update': 'true'
-						},
-						body: JSON.stringify({ message: message })
+				async post(message, onFirstResponse, onLastResponse, onError) {
+					const payload = {
+						messages: [
+							{ role: "system", content: message },
+							{ role: "user", content: `Proceed as instructed. Random Seed: ${Math.floor(Math.random() * 1000000)}, time: ${new Date().toDateString()}, OS: SaueracleOS.` }
+						],
+						json: true
 					};
-
-					this.fetchWithOptions(options, onFirstResponse, onLastResponse, onError);
+					await this.fetchWithOptions(payload, onFirstResponse, onLastResponse, onError);
 				}
 			}
 
@@ -1339,6 +1569,7 @@
 			const saueracle_explorer = new TreeExplorer();
 
 			window.onload = () => {
+				_alert_gif('SaueracleOS is undergoing reforms to adapt to the new WebSim API, things might be faster, but may not work as well as before, be patient with the tinheads!', false);
 				document.title = _app_name;
 				let div_start_menu = document.createElement('div');
 				div_start_menu.innerHTML = `
@@ -1366,15 +1597,22 @@
 				let api = new APIFetchContextual(_api_endpoint_htmlgenerator)
 				let div = desktop._nelement('div');
 				let computer_info = desktop.addWindow(`Computer Info - ${_app_name} v${_app_version}`, div, iconImage, 733, 574, 550, 120);
-				let default_html_generator_prompt = `Generate a detailed report about the current 'computer hardware' and 'software', including CPU, RAM, GPU, operating system, and installed programs. Format the response in HTML (add inline css to the elements, prefer dark-mode style), no Markdown. Include emojis. The operating system is ${_app_name}, make subtle references to ${_app_subject_name}, do not include explanations in parentheses. Include info about current page windows/apps too. Include parody benchmark stats of all kinds.`
+
+				let default_html_generator_prompt = `follow these instructions exactly: content must be a string: "<div>Benchmark tests</div>", you must generate
+					`;
 				
 				computer_info.loading(true);
 				get_computer_info();
 
 				function get_computer_info(attempts = 0) {
 					api.post(default_html_generator_prompt, 
-						response => response.json(),
+						response => response.content,
 						data => {
+							data = data.replace(/```html\s*|\s*```/g, '');
+							data = data.replace(/\"html\s*|\s*\"/g, '');
+							console.log('Computer info response:', data);
+							//data = JSON.parse(data);
+
 							if (data.length <= 100) {
 								if (attempts >= 5) {
 									div.innerHTML = `<h2>💻🔨 Running benchmark tests...</h2><br><h2>Failed, Please restart this application to try again.</h2>`
@@ -1382,10 +1620,11 @@
 								};
 								div.innerHTML = `<h2>💻🔨 Running benchmark tests...</h2>`
 								computer_info.loading(true);
-								get_computer_info(attempts++)
+								get_computer_info(attempts+=1)
 								return;
 							}
-							div.innerHTML = data.replace(/^`+|`+$/g, '');
+							//div.innerHTML = data.replace(/^`+|`+$/g, '');
+							div.innerHTML = data;
 							computer_info.loading(false);
 						},
 						error => {
@@ -1407,12 +1646,15 @@
 				let window_server_browser = desktop.addWindow('Server Browser - Powered by <img class="app_window_icon" src="https://sauertracker.net/images/squid.png"><a href="https://sauertracker.net/" target="_blank">Sauertracker.net</a>', div, iconImage, 512, 512, 550, 120);
 				window_server_browser.loading(true);
 				api_tracker_servers.get(
-					response => response.json(),
+					response => response,
 					data => {
+						console.log('Sauertracker servers response:', data);
 						tracker_servers_active = data.filter(server => server.clients > 0);
 						api.post(`Create an HTML-formatted list of cards containing the ${_app_subject_name_short} servers: ${JSON.stringify(tracker_servers_active)} (if it is empty, make up some creative ones). Format the response in HTML (add inline css to the elements, prefer dark-mode style, make sure the elements are clickable, not markdown.) add a footnote funfact about Cube 2 (unrelated to pot roast) or the servers or the activity status. Add emojis. If servers are not empty: add onclick="window.custom_bind_showServerInfo(event, 'ip here', 'port here', 'description with emojis')", no escaping.`,
-							response => response.json(),
+							response => response.content,
 							data => {
+								data = data.replace(/```html\s*|\s*```/g, '');
+								console.log('HTML response for server browser:', data);
 								let newdiv = desktop._nelement('div');
 								newdiv.innerHTML = data.replace(/^`+|`+$/g, '');
 								div.appendChild(newdiv);
@@ -1461,11 +1703,17 @@
 					window_player_profile.loading(true);
 
 					api_tracker_player.get(
-						response => response.json(),
+						response => response,
 						data => {
-							api.post(`Create an standalone HTML-formatted card containing a cool profile with infos about the following player: ${data} (if it's empty, make up a creative one for ${input_player_name.value}). Add emojis. Put some bar graphs. Do not add avatar images. Format the response in HTML (add inline css to the elements, prefer dark-mode style), make a footnote funfact about the player. The stats must be true, you can like everything else, just don't go overboard with lies.`,
-								response => response.json(),
+							// stringify data
+							data = JSON.stringify(data);
+							console.log('Player profile response:', data);
+							api.post(`Response must be HTML div, no <head>, no <title>. CSS must not affect all elements of the page. Create an standalone HTML-formatted card containing a cool profile with infos about the following Cube 2 Sauerbraten player: ${data} (if it's empty, make up a creative one for ${input_player_name.value}). Add emojis. Put some bar graphs. Do not add avatar images. Format the response in HTML (add inline css to the elements, prefer dark-mode style), make a footnote funfact about the player. The stats must be true, you can like everything else, just don't go overboard with lies.`,
+								response => response.content,
 								data => {
+									data = data.replace(/```html\s*|\s*```/g, '');
+									data = data.replace(/\"html\s*|\s*\"/g, '');
+									console.log('Player profile response:', data);
 									div_profile.innerHTML = data.replace(/^`+|`+$/g, '');
 									window_player_profile.loading(false);
 								}
@@ -1488,11 +1736,13 @@
 					window_server_preview.loading(true);
 
 					api_tracker_server.get(
-						response => response.json(),
+						response => response,
 						data => {
-							api.post(`Create an standalone HTML-formatted card containing info about the following server: ${JSON.stringify(data)} (if it's empty, make up a creative one). Add emojis. List all Players with their stats etc. Format the response in HTML (add inline css to the elements, prefer dark-mode style), make a footnote funfact. set a background cover for the server with the link ${_api_endpoint_gametracker_mapshots}/MAPNAME.jpg`,
-								response => response.json(),
+							api.post(`Response must be HTML div, no <head>, no <title>. CSS must not affect all elements of the page. Create an standalone HTML-formatted card containing info about the following server: ${JSON.stringify(data)} (if it's empty, make up a creative one). Add emojis. List all Players with their stats etc. Format the response in HTML (add inline css to the elements, prefer dark-mode style), make a footnote funfact. set a background cover for the server with the link ${_api_endpoint_gametracker_mapshots}/MAPNAME.jpg`,
+								response => response.content,
 								data => {
+									data = data.replace(/```html\s*|\s*```/g, '');
+									console.log('Server preview response:', data);
 									div.innerHTML = data.replace(/^`+|`+$/g, '');
 									window_server_preview.loading(false);
 								}
@@ -1582,7 +1832,7 @@
 				})
 
 				function drawCurrentFolder() {
-					const isImageFile = filename => /\.(jpg|jpeg|png|gif)$/i.test(filename);
+					const isImageFile = filename => /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(filename);
 					let currentPath = saueracle_explorer.contextStack.map((item, index) => `${index != 0 ? '/' : ''}${item.name}`).join('');
 					let hr = document.createElement('hr');
 					hr.style.borderStyle = 'solid';
@@ -1614,9 +1864,10 @@
 					loopfiles_window.onrefresh = () => { // re-generate current folder
 						const currentNode = saueracle_explorer.contextStack[saueracle_explorer.contextStack.length - 1];
 						loopfiles_window.loading(true);
-						api.post(`return an array of different and plausible ${_app_subject_name_short.toLowerCase()} or system related files and folders with the format [{name, type 0 for folder 1 for file, short context 'description', child: [] (if folder), content: [] (if file)}], keep child and content empty. file names must contain their extension. Do not repeat folders or file names, be creative. Folders come first. The current path is '${currentPath}/${currentNode.name}' Extra info about the parent folder: ${currentNode.description}. Make sure the folder content is consistent with its path and parent name.`,
-							response => response.json(),
+						api.post(`return an array of different and plausible ${_app_subject_name_short.toLowerCase()} or system related files and folders with the format [{name, type 0 for folder 1 for file, must include a 'description' property with a context, child: [] (if folder), content: [] (if file)}], keep child and content empty. file names must contain their extension. File names must not contain folder path. Do not repeat folders or file names, be creative, all the content must make sense with the parent folder. Folders come first. The current parent path is '${currentPath}/${currentNode.name}' Extra info about the parent folder: ${currentNode.description}. Make sure the folder content is consistent with its path and parent name as much as possible. The description for images must describe the content of the image and the width:xxx height:xxx attributes.`,
+							response => response.content,
 							data => {
+								data = JSON.parse(data);
 								currentNode.child = data; // directly modify the children of the current node
 								saueracle_explorer.currentContext = currentNode.child; // update the current context to the new children
 								console.log('regenerating folder', data)
@@ -1642,10 +1893,11 @@
 								//loopfiles_window.loading(true);
 								console.log('generating folder:', item);
 								loopfiles_window.loading(true);
-								api.post(`return an array of plausible ${_app_subject_name_short.toLowerCase()} or system related files and folders with the format [{name, type 0 for folder 1 for file, short context 'description'}], file names must contain their extension. Do not repeat folders or file names be creative. Folders come first. The current path is '${currentPath}/${item.name}' Extra info about the folder you are creating: ${item.description}. Make sure the folder content is consistent with its path and name.`,
-									response => response.json(),
+								api.post(`return an array of plausible ${_app_subject_name_short.toLowerCase()} or system related files and folders with the format [{name, type 0 for folder 1 for file, must include 'description' containing a context}], file names must contain their extension. File names must not contain folder path. Do not repeat folders or file names, be creative, all the content must make sense with the parent folder. Folders come first. The current path is '${currentPath}/${item.name}' Extra info about the folder you are creating: ${item.description}. Make sure the folder content is consistent with its path and name. The description for images must describe the content of the image and the width:xxx height:xxx attributes.`,
+									response => response.content,
 									data => {
 										console.log('got response', data)
+										data = JSON.parse(data);
 										data.forEach(item => {
 											saueracle_explorer.createItem(item.name, item.type, item.description);
 										})
@@ -1660,42 +1912,55 @@
 							}
 
 							if (item.type == 1) { // image file
-								const isImageFile = filename => /\.(jpg|jpeg|png|gif)$/i.test(filename);
+								const isImageFile = filename => /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(filename);
 								let notepad_div = document.createElement('div');
-								let notepad_window = desktop.addWindow(`📄${_truncate_string(currentPath, 60)}/${_truncate_string(item.name, 30)}`, notepad_div, _icon_file, 1024, 712, e.clientX, e.clientY);
+								let notepad_window = desktop.addWindow(`📄${_truncate_string(currentPath, 60)}/${_truncate_string(item.name, 30)} ${item.name.includes(".jsocta") ? ' | <a target="blank" href="https://salatielsauer.github.io/OGZ-Editor/">Check out OGZ-Editor!</a>' : ""}`, notepad_div, _icon_file, 1024, 712, e.clientX, e.clientY);
 								notepad_window.loading(true);
 
 								if (isImageFile(item.name)) {
+									console.log('opening image file', item.name);
 									notepad_window.subIcon = '🖼️';
 									getImageFile((img) => {
-										img.crossOrigin = 'anonymous';
 										notepad_div.innerHTML = '';
 										notepad_div.appendChild(img);
 
-										let canvas = document.createElement('canvas');
-										canvas.width = img.naturalWidth;
-										canvas.height = img.naturalHeight;
-
-										let ctx = canvas.getContext('2d');
-										ctx.drawImage(img, 0, 0);
-
-										let dataURL = canvas.toDataURL(`image/${item.name.split('.').pop().toLowerCase().replace('jpg', 'jpeg')}`);
-
-										let button_download_img = document.createElement('button');
+										// Download button
+										const button_download_img = document.createElement('button');
 										button_download_img.className = '_app_button';
 										button_download_img.textContent = '💾Save Image';
-										button_download_img.addEventListener('click', () => {
-											let fileName = item.name;
-											const url = dataURL;
-											const link = document.createElement('a');
-											link.href = url;
-											link.download = item.name;
-											link.click();
-											URL.revokeObjectURL(url);
-										})
 										notepad_div.appendChild(button_download_img);
+
+										button_download_img.addEventListener('click', () => {
+											button_download_img.disabled = true;
+											notepad_window.loading(true);
+
+											// Use proxy only for download
+											const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(img.src);
+											fetch(proxyUrl)
+												.then(response => {
+													if (!response.ok) throw new Error("Proxy fetch failed");
+													return response.blob();
+												})
+												.then(blob => {
+													const url = URL.createObjectURL(blob);
+													const link = document.createElement('a');
+													link.href = url;
+													link.download = item.name;
+													link.click();
+													setTimeout(() => URL.revokeObjectURL(url), 1000);
+												})
+												.catch(err => {
+													alert('Failed to download image: ' + err);
+												})
+												.finally(() => {
+													button_download_img.disabled = false;
+													notepad_window.loading(false);
+												});
+										});
+
 										notepad_window.loading(false);
 									});
+
 
 									return;
 								}
@@ -1781,15 +2046,31 @@
 									button_run_guiscript.textContent = '👁️‍🗨️Preview GUI';
 									button_run_guiscript.addEventListener('click', (e) => {
 										notepad_window.loading(true);
-										api_guiscript.post(`Return a GUI that follows the user's script input: "${textEditor.textarea.value}". the response must follow the format {body, title}. Try your best to make functional features with javascript, add inline css to the elements, prefer dark-mode style, wrap everything in an iframe. Include emojis. Make the width/height size be enough to fit the content.`,
-											response => response.json(),
+										api_guiscript.post(`Return a GUI that follows the user's script input: "${textEditor.textarea.value}".
+										Try your best to make functional features with javascript, add inline css to the elements, prefer dark-mode style. Include emojis. Make the width/height size be enough to fit the content. Do not include "explanations", all the content must be inside the html. Do not make "placeholders".`,
+											response => response.content,
 											response => {
+												response = response.replace(/```html\s*|\s*```/g, '');
+												console.log('guiscript response:', response);
 												notepad_window.loading(false);
 												if (!response) return;
+
+												// create a container div
 												let guiscript_div = document.createElement('div');
-												guiscript_div.innerHTML = `<p>this ${_app_name.toLowerCase()} feature is unfinished and you shouldn't be seeing it</p><br>` + response.body;
-												let guiscript_window = desktop.addWindow(`📄${response.title}`, guiscript_div, _icon_file, 512, 512, e.clientX, e.clientY);
-												
+												guiscript_div.innerHTML = `<p>this ${_app_name.toLowerCase()} feature is unfinished and you shouldn't be seeing it</p><br>`;
+
+												// create the iframe element
+												let iframe = document.createElement('iframe');
+												iframe.style.width = '100%';
+												iframe.style.height = '400px';
+
+												// use srcdoc to set the content of the iframe
+												iframe.srcdoc = response;
+
+												// append the iframe to the container div
+												guiscript_div.appendChild(iframe);
+												let guiscript_window = desktop.addWindow(`📄${item.name} (👁️‍🗨️)`, guiscript_div, _icon_file, 512, 512, e.clientX, e.clientY);
+												guiscript_window.subIcon = '👁️‍🗨️';
 											},
 											error => {
 												_alert_gif(error);
@@ -1815,6 +2096,7 @@
 									}
 
 									let offset = 0;
+									console.log('processing chunks', data);
 									data.forEach(chunk => {
 										const startIdx = textEditor.textarea.value.indexOf(chunk.start, offset);
 										const endIdx = textEditor.textarea.value.indexOf(chunk.end, startIdx + chunk.start.length) + chunk.end.length;
@@ -1837,15 +2119,16 @@
 									if (textEditor.textarea.value.length != 0) {
 										text_prompt = `return a single array containing a sequence of 'chunks' of plain text of a plausible content in the format [{start, end, content: '...'}], the start and end are keywords that will be replaced (and everything in between), they represents the start and end of the area that you want to continue, fix, or adapt in the text: '${textEditor.textarea.value}', stick to smart changes, no need to replace the entire text. Extra info about the file you are fixing: Path: '${currentPath}/${item.name}', Description: ${item.description}`;
 									} else {
-										text_prompt = `return a single object containing a plain text of a plausible content in the format {content: '...'} for the file '${currentPath}/${item.name}'. Extra info about the file you are creating: ${item.description}.`;
+										text_prompt = `return a single object containing a plain text of a plausible content in the format {content: '...'} for the file '${currentPath}/${item.name}'. Extra info about the file you are creating: ${item.description}. Be creative.`;
 									}
 									api.post(text_prompt,
 										response => {
 											console.log('first response:', response);
-											return response.json();
+											return response.content;
 										},
 										data => {
 											console.log('last response', data);
+											data = JSON.parse(data);
 											if (textEditor.textarea.value.length !=0) {
 												processChunks(data);
 											} else {
@@ -1867,25 +2150,65 @@
 							}
 						});
 
+						async function generateAndSetImageIcon(item, icon, currentPath) {
+							try {
+								// Use currentPath and item.name as the prompt
+								function extractDimension(str, key) {
+								// Match 'width:512' or 'height:512' (case-insensitive)
+								const regex = new RegExp(`${key}\\s*:\\s*(\\d+)`, 'i');
+								const match = str.match(regex);
+								return match ? parseInt(match[1], 10) : null;
+								}
+
+								function clampOrRandom(val, min = 100, max = 1024) {
+								if (!val || val < min || val > max) {
+									// Return a random plausible value in range
+									return Math.floor(Math.random() * (max - min + 1)) + min;
+								}
+								return val;
+								}
+
+								const widthRaw = extractDimension(item.description, "width");
+								const heightRaw = extractDimension(item.description, "height");
+
+								const width = clampOrRandom(widthRaw);
+								const height = clampOrRandom(heightRaw);
+
+								const result = await websim.imageGen({
+								prompt: `generate the image as if it were located at "${encodeURIComponent(`${currentPath}/${item.name}`)}", and the image description is: "${item.description}". it must match the description and file path as much as possible.`,
+								width,
+								height,
+								seed: Math.floor(Math.random() * 1000000),
+								});
+
+
+								icon.src = result.url;
+								icon.alt = `${currentPath}/${item.name} (${item.description})`;
+								item.content = { src: result.url };
+
+								icon.onload = () => {
+									console.log('Custom icon loaded', icon.src);
+								};
+							} catch (err) {
+								icon.src = _icon_file; // fallback icon
+								console.error("Image generation failed", err);
+							}
+						}
+
 						// generate image
 						if (isImageFile(item.name)) {
 							if (!item.content) {
-								icon.src = `fakeimg.pl/${currentPath}/${item.name}`;
-								icon.src = _icon_file;
-								icon.onload = (e) => {
-									item.content = icon;
-									console.log('custom icon loaded', item.content);
-								}
+								generateAndSetImageIcon(item, icon, currentPath);
 							}
 
 							icon.src = item.content.src;
-							icon.alt = `${currentPath}/${item.name} (${item.description})`;
+							//icon.alt = `${currentPath}/${item.name} (${item.description})`;
 						}
 
-						function getImageFile(callback  = ()=>{}) {
+						function getImageFile(callback = ()=>{}) {
 							let img = document.createElement('img');
-							img.src = icon.src;
-							img.alt = `opengl fps in-game screenshot or asset: ${currentPath}/${item.name} (${item.description})`;
+							img.src = item.content.src;
+							img.alt = `${currentPath}/${item.name} (${item.description})`;
 							//img.width = Math.floor(Math.random() * (512 - 16 + 1)) + 16;
 							//img.height = Math.floor(Math.random() * (512 - 16 + 1)) + 16;
 							img.style.width = '80%';
@@ -1895,7 +2218,7 @@
 							img.style.boxShadow = '3px 5px 13px #0000006e';
 							img.style.filter = 'saturate(1.2)';
 							img.style.position = 'absolute';
-							img.onload = () => callback(img);
+							callback(img);
 						}
 					})
 				}
@@ -1908,60 +2231,110 @@
 				let cubicle = new APIFetchContextual(_api_endpoint_chatgenerator);
 				let cubicle_window = desktop.addWindow('Cubicle - Sauerworld', chat.div_chat, iconImage, 712, 456, e.clientX, e.clientY);
 
-				function bot_pushMessage(user, message) {
-					_cubicle_simulate_typing(message, processed => {
-						chat.pushMessage(user, processed);
-					}, chat);
-				}
+				chat_flow.ontyping((status, user) => {
+					if (status.length > 0) {
+						chat.showStatus(`💬${status}`);
+					} else {
+						chat.showStatus('');
+					}
+				})
 
-				if (_cubicle_initial_context.length == 0) {
-					chat.showStatus('<span class="extra_spin">↻</span> Loading previous messages...');
-					cubicle_window.loading(true);
-					cubicle.post(`Return an array of ongoing ${_app_subject_name} - related messages with the format [{name, message}], where the name is a player name with maximum of 15 characters. You can use parody of real sauer player names (replace some character or make an adaptation). The conversation must be centered around a random sauer topic. Each user expresses themselves differently and has their own personality.`,
-						response => response.json(),
+				chat_flow.onsilence(() => {
+					cubicle.post(`The chat went into a silence for the past minute, From context: '${chat_flow.sentMessages.map(m => `"${m.name}: ${m.message}"`).join()}', Return related an array of messages object with format [{name: name, message: message}], where the name is a player name with maximum of 15 characters, continue the ongoing conversation, feel free to join someone new etc. Make messages natural with no overused capitalization. 'Unnamed' is the real user, do not use it in the response. You can reply to unnamed's message tho.`,
+						response => response.content,
 						data => {
-							chat.showStatus('💬Someone is typing...');
+							data = JSON.parse(data);
+							console.log('cubicle silence response:', data);
 							data.forEach((user, index) => {
-								const timeOffsetSeconds = (index * 30) - (data.length * 30);
-								if (index <= Math.floor(Math.random() * data.length-1)) {
-									chat.pushMessage(user.name, user.message, chat.parent, timeOffsetSeconds)
-								} else {
-									bot_pushMessage(user.name, user.message);
-								}
+								chat_flow.addToQueue({
+									name: user.name,
+									message: user.message,
+									onSend: (msg) => {
+										chat.pushMessage(msg.name, msg.message);
+									}
+								});
 							})
-							_cubicle_initial_context = data;
+
 							cubicle_window.loading(false);
 						}
 					);
-				} else {
-					_cubicle_initial_context.forEach(user => {
-						chat.pushMessage(user.name == 'user' ? -1 : user.name, user.message);
-					})
-					cubicle.post(`From context: '${_cubicle_initial_context.map(m => `"${m.name}: ${m.message}"`).join()}', Return a single ${_app_subject_name.toLowerCase()} - related message object with format {name, message}, where the name is a player name with maximum of 15 characters, continue the ongoing conversation, feel free to join someone new etc.`,
-						response => response.json(),
+				});
+
+
+				if (chat_flow.readyQueue.length == 0) {
+					chat.showStatus('<span class="extra_spin">↻</span> Loading previous messages...');
+					cubicle_window.loading(true);
+					cubicle.post(`Return an array of ongoing ${_app_subject_name} - related messages with the format [{name, message}], where the name is a player name with maximum of 15 characters. You can use parody of real sauer player names (replace some character or make an adaptation). The conversation must be centered around a random sauer topic. Each user expresses themselves differently and has their own personality. Make messages natural with no overused capitalization. Make the players personality really different.`,
+						response => response.content,
 						data => {
-							bot_pushMessage(data.name, data.message);
-							_cubicle_initial_context.push(data);
-							
+							data = JSON.parse(data);
+
+							data.forEach((user, index) => {
+								chat_flow.addToQueue({
+									name: user.name,
+									message: user.message,
+									onSend: (msg) => {
+										chat.pushMessage(msg.name, msg.message);
+									}
+								});
+							})
+							// insta send half of the messages
+							chat_flow.instaSend(Math.floor(data.length / 3));
+
+							cubicle_window.loading(false);
+						}
+					);
+
+				} else {
+					chat_flow.sentMessages.forEach(user => {
+						chat.pushMessage(user.name == 'unnamed' ? -1 : user.name, user.message);
+					})
+					cubicle.post(`From context: '${chat_flow.sentMessages.map(m => `"${m.name}: ${m.message}"`).join()}', Return a single ${_app_subject_name.toLowerCase()} - related message object with format {name: name, message: message}, where the name is a player name with maximum of 15 characters, continue the ongoing conversation, feel free to join someone new etc. Make messages natural with no overused capitalization.`,
+						response => response.content,
+						data => {
+							chat.showStatus(`💬${chat_flow.typingStatus}`);
+							data.forEach((user, index) => {
+								chat_flow.addToQueue({
+									name: user.name,
+									message: user.message,
+									onSend: (msg) => {
+										chat.pushMessage(msg.name, msg.message);
+									}
+								});
+							});
 						}
 					)
 				}
+
 				function sendInput() {
 					if (chat.textarea_chat.value.trim().length == 0) return;
 					chat.pushMessage(-1, chat.textarea_chat.value);
-					if (_cubicle_activeTypingCount == 0) {
-						setTimeout(() => {
-							chat.showStatus('💬Someone is typing...');
-						}, Math.random() * 1500 + 100);
-					}
-					_cubicle_initial_context.push({name: 'user', message: chat.textarea_chat.value});
+					chat_flow.sentMessages.push({
+						name: 'unnamed',
+						message: chat.textarea_chat.value
+					});
+					const context = chat_flow.getContext({ pastCount: 5, futureCount: 5 }); // for example, 5 previous + current anchor
 
-					cubicle.post(`From context: '${_cubicle_initial_context.map(m => `"${m.name}: ${m.message}"`).join()}', Return one o more ${_app_subject_name.toLowerCase()} - related message array with format [{name, message}], always follow the conversation flow set by the user, if he directs a message to someone, make sure that person replies, others may talk to each other etc. feel free to join someone new etc. 'User' is the real user, try to avoid mentioning his name if the user don't say it. 'shoot better' and the fact that sauer takes too long to get a new release are common jokes. Each user expresses themselves differently and has their own personality.`,
-						response => response.json(),
+					// collect past + anchor messages for display
+					const contextMessages = [
+					...context.past,
+					context.anchor,
+					...context.future
+					].filter(Boolean); // in case anchor is null
+					console.log('context messages:', contextMessages);
+					cubicle.post(`From context: '${contextMessages.map(m => `"${m.user || m.name}: ${m.message}"`).join(", ")}', Return one o more ${_app_subject_name.toLowerCase()} - related message array with format [{name: name, message: message}], always follow the conversation flow set by the user ('unnamed'), the most recent message is the one sent by 'unnamed', the others after it are messages coming togheter with yours. if unnamed directs a message to someone, make sure that person replies, others may talk to each other etc. feel free to join someone new etc. Your generated names must not include 'unnamed' because it is the real user. Never Repeat Unnamed's Messages. 'shoot better' and the fact that sauer takes too long to get a new release are common jokes. Each user expresses themselves differently and has their own personality. Do not repeat unnamed's message. Do not treat user as god or anything, he is just a player. Make messages natural with no overused capitalization. You can return like 3-5 messages at once, but do not return more than 10 messages in a single response. atleast half the responses must not be directed to unnamed. Please never generate response using unnamed's name, it is the real user. You can reply to unnamed's message tho. Stick with each player's personality.`,
+						response => response.content,
 						data => {
+							data = JSON.parse(data);
+							console.log('cubicle response:', data);
 							data.forEach((user, index) => {
-								bot_pushMessage(user.name, user.message);
-								_cubicle_initial_context.push({name: user.name, message: user.message});
+								chat_flow.addToQueue({
+									name: user.name,
+									message: user.message,
+									onSend: (msg) => {
+										chat.pushMessage(msg.name, msg.message);
+									}
+								});
 							})
 						}
 					)
@@ -1987,11 +2360,11 @@
 
 				//let josias_base_prompt = `_addCube returns an array as the cube. Each cube measures 4x4, within a 1024 cube octree. No overlapping cubes. Texture indexes are from 0 to 1704. Include the function and ';return genGeometry();' in one scope. Center structure at 512,512,512. Z is up. Minifiy the javascript. Be Smart & Creative. Textures: 1 default, 2 grass, 767 grass2, 6 wall, 831 yellow, 832 red, 833 blue, 834 green, 777 black. If asked, use _addGround(texture) to add a ground to the bottom part of the map. Finish your response with the return genGeometry(). Make sure you don't get max call stack errors. Always return a flat array of objects.`
 
-				let josias_base_prompt = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Use math to craft a JS formula that concats _addCube(x, y, z, texture) to build a 3D map for ${_app_subject_name_short}. Your function body must return the formula result. _addCube returns an array that defines the cube properties. Each cube measures 4x4, within a 1024 cube octree world. No overlapping cubes. Texture indexes are from 0 to 1704. Center structure at 512,512,512. Z is up. Be Smart & Creative, prefer structures with a greater number (less than 500000) of cubes and well detailed. Some textures: 1 default, 2 grass, 767 grass2, 6 wall, 831 yellow, 832 red, 833 blue, 834 green, 777 black. Do not return any plain text. You must only return the formula result. IF solicited, use the helper function _addText(text, x, y, z) to generate a 3D text at the given position or _addGround(texture) to add 4 512x512 cubes at the bottom part of the map. Do not add texts nor ground if not requested by the user. Your function must always return an array.`;
+				let josias_base_prompt = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Do not include backticks. Use math to craft a JS formula that concats _addCube(x, y, z, texture) to build a 3D map for ${_app_subject_name_short}. Your function body must return the formula result. _addCube returns an array that defines the cube properties. Each cube measures 4x4, within a 1024 cube octree world. No overlapping cubes. Texture indexes are from 0 to 1704. Center structure at 512,512,512. Z is up. Be Smart & Creative, prefer structures with a greater number (less than 500000) of cubes and well detailed. Some textures: 1 default, 2 grass, 767 grass2, 6 wall, 831 yellow, 832 red, 833 blue, 834 green, 777 black. Do not return any plain text. You must only return the formula result. IF solicited, use the existing global helper function _addText(text, x, y, z) to generate a 3D text at the given position or the global helper _addGround(texture) to add 4 512x512 cubes at the bottom part of the map. Do not add texts nor ground if not requested by the user. Your function must always return an array. Do not redefine helper functions (_addCube, _addText, _addGround) they already exists in the global scope.`;
 
-				let josias_base_prompt_simple = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Use math to craft a JS formula that concats _addCube(x, y, z, texture) to build a 3D map for ${_app_subject_name_short}. Your function body must return the formula result. _addCube returns an array that defines the cube properties. Each cube measures 4x4, within a 1024 cube octree world. No overlapping cubes. Texture indexes are from 0 to 1704. Center structure at 512,512,512. Z is up.`;
+				let josias_base_prompt_simple = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Do not include backticks. Use math to craft a JS formula that concats _addCube(x, y, z, texture) to build a 3D map for ${_app_subject_name_short}. Your function body must return the formula result. _addCube returns an array that defines the cube properties. Each cube measures 4x4, within a 1024 cube octree world. No overlapping cubes. Texture indexes are from 0 to 1704. Center structure at 512,512,512. Z is up. Do not redefine helper functions (_addCube, _addText, _addGround) they already exists in the global scope.`;
 
-				let josias_base_prompt_tryhard = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Create a JavaScript math formula that constructs a 3D map for ${_app_subject_name_short} using the function _addCube(x, y, z, texture). Each cube is 4x4 within a 1024 cube octree, centered at (512, 512, 512) with 'z' as the vertical axis. The function must return the array of cubes created, ensuring no overlapping cubes and using texture indexes from 0 to 1704. Consider these texture examples: 1 (default), 2 (grass), 767 (grass2), 6 (wall), 831 (yellow), 832 (red), 833 (blue), 834 (green), and 777 (black). Minimize your JavaScript code for efficiency. Optionally, employ _addText(text, x, y, z) for 3D text or _addGround(texture) for ground textures, but only if specified. The final result should be visually appealing and functional.`
+				let josias_base_prompt_tryhard = `Your response must be a object containing a javascript Function body in the format {body: '...'}. Do not include backticks. Create a JavaScript math formula that constructs a 3D map for ${_app_subject_name_short} using the global function _addCube(x, y, z, texture). Each cube is 4x4 within a 1024 cube octree, centered at (512, 512, 512) with 'z' as the vertical axis. The function must return the array of cubes created, ensuring no overlapping cubes and using texture indexes from 0 to 1704. Consider these texture examples: 1 (default), 2 (grass), 767 (grass2), 6 (wall), 831 (yellow), 832 (red), 833 (blue), 834 (green), and 777 (black). Minimize your JavaScript code for efficiency. Optionally, employ the global _addText(text, x, y, z) for 3D text or the global _addGround(texture) for ground textures, but only if specified. The final result should be visually appealing and functional. Do not redefine helper functions (_addCube, _addText, _addGround) they already exists in the global scope.`
 
 				let josias_window = desktop.addWindow(`Josias The Mapper <button class='_app_button _app_button_small' onclick='window._josias_openWithLoopfiles("JSOCTA", event)'>📁 Open LoopFiles</button>`, chat.div_chat, iconImage, 712, 456, e.clientX, e.clientY);
 				let josias_response_attempts = 0;
@@ -1999,9 +2372,10 @@
 					return new Date().toISOString().replace(/-|:|T|\.\d+Z/g, '');
 				}
 
-				josias.onfirstresponse = (r => r.json())
+				josias.onfirstresponse = (r => r.content)
 				josias.onlastresponse = (r => {
 					chat.showStatus(false)
+					r = JSON.parse(r);
 					function josias_failed(error) {
 						console.log('josias receivend an error', error);
 						josias_fixit(`❌😞 I was unable to make the map file (${error}), let's try again.`);
@@ -2180,37 +2554,6 @@
 				}
 			});
 
-			let _cubicle_initial_context = []; // stores cubicle messages
-			let _cubicle_lastMessageTime = 0; // track when the last message was scheduled to appear
-			let _cubicle_activeTypingCount = 0; // counter to track active typing simulations
-			function _cubicle_simulate_typing(message, callback, chat) {
-				// increase the count of active typing simulations
-				_cubicle_activeTypingCount++;
-
-				// calculate the delay: base delay of 1500ms + 150ms for each character in the message + a random additional 0-2500ms
-				let delay = 1500 + message.length * 150 + Math.floor(Math.random() * 2500);
-
-				// schedule the new message to appear after the last scheduled message
-				let nextMessageTime = Math.max(Date.now(), _cubicle_lastMessageTime) + delay;
-				_cubicle_lastMessageTime = nextMessageTime;
-
-				setTimeout(() => {
-					callback(message);
-					// immediately hide the status when the message is displayed
-					chat.showStatus(false);
-
-					// decrease the count of active typing simulations
-					_cubicle_activeTypingCount--;
-					
-					// if there are more messages to simulate, show the status again after a delay
-					if (_cubicle_activeTypingCount > 0) {
-						setTimeout(() => {
-							chat.showStatus('💬Someone is typing...');
-						}, delay/2);
-					}
-				}, nextMessageTime - Date.now());
-			}
-
 			function _simple_trim(inputString) {
 				// targets quotation marks at the start and end of the string
 				return inputString.replace(/^['"`]+|['"`]+$/g, "");
@@ -2306,17 +2649,30 @@
 				}
 			}
 
-			function _alert_gif(error) {
+			function _alert_gif(error, fatal = true) {
 				let div_error = document.createElement('div');
-				console.error(error)
+				if (fatal) { console.error(error); } else { console.warn(error); }
+
+				// Set styles and icons based on severity
+				let icon = fatal ? _icon_fail : _icon_info || '⚠️'; // use your warning icon if you have one
+				let color = fatal ? 'red' : 'orange';
+				let emoji = fatal ? '😭' : '😐';
+				let title = fatal 
+					? `❌⚠️❗<strong style='color: red;'>${_app_name} Failed</strong>❌❌⚠️`
+					: `⚠️<strong style='color: orange;'>${_app_name} Warning</strong>⚠️`;
+
 				div_error.innerHTML = `
-					<img src=${_icon_fail}>
-					<div style='color: red'>😭${error}</div>
-					If you continue to see this, please refresh the page or try again later.
-				`
-				let error_window = desktop.addWindow(`❌⚠️❗<strong style='color: red;'>${_app_name} Failed<strong>❌❌⚠️`, div_error, _icon_fail, 612, 450, 300, 100);
-				error_window.subIcon = '❌';
+					<img src="${icon}">
+					<div style='color: ${color}'>${emoji} ${error}</div>
+					${fatal 
+						? "If you continue to see this, please refresh the page or try again later."
+						: "This issue is not critical. You may continue, but some features may not work as expected.<br><hr><br><img src='https://i.imgur.com/JgC89zE.png' width='512px'>"
+					}
+				`;
+				let error_window = desktop.addWindow(title, div_error, icon, 612, 450, 500, 300);
+				error_window.subIcon = fatal ? '❌' : '⚠️';
 				error_window.body.style.textAlign = 'center';
+				if (!fatal) error_window.body.style.borderColor = 'orange';
 			}
 
 
