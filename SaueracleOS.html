@@ -1,11 +1,11 @@
 <!--SaueracleOS by @SalatielSauer - Content Generation Toolset for Sauerbraten-->
-<!--This is an incomplete remake of SaueracleOS (18/07/2025)-->
+<!--This is an incomplete remake of SaueracleOS (19/07/2025)-->
 <!DOCTYPE html>
 <html>
 	<head>
 		<!--<base href='SaueracleOS/v1.0'>-->
 		<title>SaueracleOS</title>
-        <link rel="icon" type="image/x-icon" href="saueracle.ico">
+		<link rel="icon" type="image/x-icon" href="saueracle.ico">
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/speed-highlight/core/dist/themes/dark.css">
@@ -965,7 +965,8 @@
 						element.appendChild(document.createElement('br'));
 					}
 				}
-				pushMessage(author, message, element = this.parent, timestampOfsset = 0) {
+
+				/*pushMessage(author, message, element = this.parent, timestampOfsset = 0) {
 					let span = document.createElement('span');
 					span.className = (author == -1 ? '_app_chat_me' : '_app_chat_other');
 					if (message instanceof HTMLElement) {
@@ -983,7 +984,65 @@
 					element.scrollTop = element.scrollHeight;
 					if (author == -1) { this.addBreaks(element, 2) }
 					return span;
+				}*/
+
+				pushMessage(author, message, element = this.parent, timestampOfsset = 0) {
+					let span = document.createElement('span');
+					span.className = (author == -1 ? '_app_chat_me' : '_app_chat_other');
+					const username = author; // or adjust as needed
+
+					//const fileRegex = /([a-zA-Z0-9_\-\.]+?\.[a-zA-Z0-9]{1,8})/g;
+					// must only match file extensions (texts, images, .ogz, js, html, css, etc.
+
+					const fileRegex = /([a-zA-Z0-9_\-\.]+?\.(jsocta|txt|js|html|css|ogz|cfg|png|jpg|jpeg|gif|webp|bmp|exe))/g;
+					
+					const replacer = (match, filename) => {
+						const filePath = `cubicle/${username}/${filename}`;
+						return `<span class='_app_chat_file'
+							style="color:#fd45c4;cursor:pointer;text-decoration:underline;"
+							onclick="(function(event){
+								event.stopPropagation();
+								const period = chat_flow.getContext({pastCount:5, futureCount:5});
+								const contextMessages = [
+									...period.past,
+									period.anchor,
+									...period.future
+								].filter(Boolean);
+								let context = contextMessages.map(m => m.name + ': ' + m.message).join(' ');
+								_loopfiles_generateFile('${filePath}', context, event, () => {
+									saueracle_explorer.openFolder('cubicle/${username}');
+									_josias_openWithLoopfiles('cubicle/${username}', event);
+								});
+							})(event)"
+							>${filename}</span>`;
+					};
+
+					if (message instanceof HTMLElement) {
+						span.appendChild(message);
+					} else {
+						let date = new Date();
+						date.setSeconds(date.getSeconds() + timestampOfsset);
+						let timestamp = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+						let processedMessage = message;
+						if (author != -1) {
+							// Only do file replacement if author != -1
+							processedMessage = message.replace(fileRegex, replacer);
+						}
+						
+						span.innerHTML = `${
+							author == -1 ? '' : `<span class='_app_chat_other_name'><strong>${author}</strong><span class='_app_chat_other_name_timestamp'>${timestamp}</span></span>`
+						}<span>${processedMessage}</span>`;
+					}
+
+					this.messages.push({author, span});
+					if (author == -1) { this.addBreaks(element, 2) } else { this.addBreaks(element, 1) }
+					element.appendChild(span);
+					element.scrollTop = element.scrollHeight;
+					if (author == -1) { this.addBreaks(element, 2) }
+					return span;
 				}
+
 
 				drawMessages(element = this.parent) {
 					element.innerHTML = ``;
@@ -1370,6 +1429,12 @@
 									}
 								]
 							},
+							{
+								name: 'cubicle',
+								type: 0,
+								description: `Cubicle is the ${_app_name} public chat room, where users discuss about ${_app_subject_name} and other topics. The files they share are stored here, all in subfolders by user name (15-characters max, you can use parody of real sauer player names (replace some character or make an adaptation)). With exception of logs, only folders are allowed, and must not contain folder path. The root folder must include log files of the conversations identified by the date in the format 'YYYY-MM-DD_HH-MM-SS.log'. For the logs conversation: The conversation must be centered around a random sauer topic. Include this at the end of the content description: "Each user expresses themselves differently and has their own personality, messages are natural with no overused capitalization, the players personality are really different from each other."`,
+								child: []
+							},
 						]
 					};
 
@@ -1444,14 +1509,14 @@
 						});
 				}
 
-				pushFile(path, content) {
+				pushFile(path, content, description = '') {
 					const pathElements = path.split('/'); // split the path by '/'
 					let currentFolder = this.tree; // start from the root
 
 					for (let i = 0; i < pathElements.length; i++) {
 						const element = pathElements[i];
 						if (i === pathElements.length - 1) { // if it's the last element, it's a file
-							currentFolder.child.push({ name: element, type: 1, description: 'File at ' + path, content: content });
+							currentFolder.child.push({ name: element, type: 1, description: 'File at ' + path + description, content: content });
 						} else { // it's a folder
 							let foundFolder = currentFolder.child.find(child => child.name === element && child.type === 0);
 							if (!foundFolder) { // if folder does not exist, create it
@@ -2220,7 +2285,9 @@
 							img.style.position = 'absolute';
 							callback(img);
 						}
+						item['element'] = icon;
 					})
+					
 				}
 				drawCurrentFolder()
 			};
@@ -2968,6 +3035,21 @@
 
 				link.click();
 				URL.revokeObjectURL(url);
+			}
+
+			function _loopfiles_generateFile(path, description, event, ondone = () => {}) {
+				//event.stopPropagation();
+				saueracle_explorer.pushFile(`${path}`, '', 'file content must match the context: ' + description);
+				ondone();
+
+				// remove filename and last / before opening the folder
+				//saueracle_explorer.openFolder(path.replace(/\/[^/]+$/, ''));
+
+				// find generated file and click it
+				const file = saueracle_explorer.currentContext.find(f => f.name === path.split('/').pop());
+				if (file) { file.element.click() } else {
+					console.warn(`File ${path} not created in current context.`);
+				}
 			}
 
 			function _download_file(name, content, type = 'application/gzip') {
